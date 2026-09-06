@@ -35,7 +35,7 @@ interface ChatWidgetPanelProps {
   onPendingMessageSent?: () => void;
 }
 
-// 🆕 FUNCION: Formatea la fecha/hora actual en español con zona horaria Europe/Madrid
+// FUNCION: Formatea la fecha/hora actual en español con zona horaria Europe/Madrid
 function getCurrentDateTimeES(): string {
   const now = new Date();
   const options: Intl.DateTimeFormatOptions = {
@@ -51,7 +51,7 @@ function getCurrentDateTimeES(): string {
   return now.toLocaleString('es-ES', options);
 }
 
-// 🆕 FUNCION: Prefija la fecha/hora al mensaje del usuario (SOLO para enviar al agente)
+// FUNCION: Prefija la fecha/hora al mensaje del usuario (SOLO para enviar al agente)
 function prefixMessageWithDateTime(text: string): string {
   const fecha = getCurrentDateTimeES();
   return `[Fecha y hora actual: ${fecha}]\n\n${text}`;
@@ -112,14 +112,14 @@ const ChatWidgetPanel: React.FC<ChatWidgetPanelProps> = ({
     async (text: string) => {
       if (!agentRef.current || !text.trim() || isTyping) return;
 
-      // 🆕 Agregar fecha/hora actual al mensaje SOLO para enviar al agente
+      // Agregar fecha/hora actual al mensaje SOLO para enviar al agente
       const messageWithDate = prefixMessageWithDateTime(text);
 
-      // 🔄 Mostrar en la UI el mensaje LIMPIO (sin fecha) del usuario
+      // Mostrar en la UI el mensaje LIMPIO (sin fecha) del usuario
       const optimisticMessage = {
         id: 'optimistic' as const,
         type: 'user-message' as const,
-        text: text, // ← SOLO el texto original, sin fecha
+        text: text, // <-- SOLO el texto original, SIN fecha
         createdAt: new Date(),
         isAgent: () => false,
         isUser: () => true,
@@ -132,7 +132,7 @@ const ChatWidgetPanel: React.FC<ChatWidgetPanelProps> = ({
       try {
         const agent = agentRef.current;
         const currentTask = taskRef.current;
-        // 🆕 Enviamos al agente el mensaje CON fecha
+        // Enviamos al agente el mensaje CON fecha
         const task = currentTask
           ? await agent.sendMessage(messageWithDate, currentTask)
           : await agent.sendMessage(messageWithDate);
