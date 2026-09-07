@@ -58,7 +58,7 @@ function AdminPage() {
       </div>
 
       <p className="mt-8 text-sm text-cream/40">
-        Accede desde tu móvil en: orange-ember-eats.vercel.app/admin
+        Accede desde tu móvil en: restaurante-punto-verde.vercel.app/admin
       </p>
     </div>
   );
