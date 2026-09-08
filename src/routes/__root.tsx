@@ -85,17 +85,22 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Punto Verde" },
-      { name: "description", content: "Punto Verde — Cocina con alma y sabor natural." },
+      { name: "description", content: "Restaurante Punto Verde — Cocina con alma y sabor natural. Autentica cocina colombiana en Almeria. Bandeja paisa, sancocho, arepas y mas delicias tradicionales. Reserva tu mesa ahora." },
+      { name: "keywords", content: "restaurante colombiano, Almeria, bandeja paisa, comida colombiana, restaurante Punto Verde, cocina tradicional" },
       { name: "author", content: "Punto Verde" },
+      { name: "robots", content: "index, follow" },
       { name: "theme-color", content: "#5F7A3A" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
       { name: "apple-mobile-web-app-title", content: "Punto Verde" },
-      { property: "og:title", content: "Punto Verde" },
-      { property: "og:description", content: "Punto Verde — Cocina con alma y sabor natural." },
+      { property: "og:title", content: "Punto Verde — Cocina con Alma" },
+      { property: "og:description", content: "Restaurante Punto Verde — Autentica cocina colombiana en Almeria. Bandeja paisa, sancocho, arepas y mas. Reserva tu mesa." },
       { property: "og:type", content: "website" },
+      { property: "og:locale", content: "es_ES" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@punto_verde" },
+      { name: "twitter:title", content: "Punto Verde — Cocina con Alma" },
+      { name: "twitter:description", content: "Restaurante Punto Verde — Autentica cocina colombiana en Almeria. Reserva tu mesa." },
     ],
     links: [
       { rel: "manifest", href: "/manifest.json" },
@@ -111,6 +116,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: appCss,
       },
       { rel: "icon", href: "/favicon-32x32.png", type: "image/png" },
+    ],
+    scripts: [
+      {
+        src: "https://www.googletagmanager.com/gtag/js?id=G-Y3V39LHJZZ",
+        async: true,
+      },
+      {
+        children: `window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-Y3V39LHJZZ');`,
+      },
     ],
   }),
   shellComponent: RootShell,
