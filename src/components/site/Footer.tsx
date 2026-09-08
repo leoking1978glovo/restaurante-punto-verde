@@ -37,7 +37,7 @@ export function Footer() {
             </p>
 
             <p className="mt-4 text-cream/70">+34 950 67 45 42</p>
-            <p className="text-cream/70">hola@punto-verde.es</p>
+            <p className="text-cream/70">restaurantpuntoverde.es</p>
           </div>
 
           <div>
