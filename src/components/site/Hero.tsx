@@ -47,7 +47,7 @@ export function Hero() {
           transition={{ delay: 0.25, duration: 0.6 }}
           className="mb-6 text-xs font-semibold tracking-[0.4em] text-secondary uppercase"
         >
-          Cocina con alma · Desde 2024
+          Cocina con el alma · Desde 2024
         </motion.p>
 
         <h1 className="max-w-[15ch] text-[clamp(3.5rem,13vw,9.5rem)] text-cream">
