@@ -17,13 +17,18 @@ export function CartDrawer() {
   const handlePedirAhora = async () => {
     if (items.length === 0) return;
 
-    const status = await getOrderStatus();
+    try {
+      const status = await getOrderStatus();
 
-    if (!status.open) {
-      alert(
-        "La cocina está a tope en este momento. Volveremos a recibir pedidos pronto. ¡Gracias por tu paciencia!"
-      );
-      return;
+      if (!status.open) {
+        alert(
+          "La cocina está a tope en este momento. Volveremos a recibir pedidos pronto. ¡Gracias por tu paciencia!"
+        );
+        return;
+      }
+    } catch (error) {
+      console.error("No se pudo comprobar el estado de la cocina:", error);
+      // Si la comprobación falla, dejamos pasar el pedido igualmente
     }
 
     const lines = items.map(

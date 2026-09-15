@@ -5,8 +5,14 @@ const redis = Redis.fromEnv();
 
 export const getOrderStatus = createServerFn({ method: "GET" }).handler(
   async () => {
-    const value = await redis.get("orders:open");
-    return { open: value !== false };
+    try {
+      const value = await redis.get("orders:open");
+      return { open: value !== false };
+    } catch (error) {
+      console.error("Error consultando Redis:", error);
+      // Si Redis falla, asumimos cocina abierta para no bloquear pedidos
+      return { open: true };
+    }
   }
 );
 
