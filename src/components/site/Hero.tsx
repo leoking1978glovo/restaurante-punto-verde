@@ -72,7 +72,7 @@ export function Hero() {
             className="max-w-md text-base leading-relaxed text-cream/70"
           >
             Ingredientes frescos, recetas tradicionales de Colombia y un espacio donde cada plato cuenta una historia.
-            Un sitio honesto y adictivo en pleno centro de Almería.
+            Un sitio Agradable y adictivo en pleno centro de Almería.
           </motion.p>
 
           {/* BOTÓN RESERVAR MESA: visible en TODOS (móvil + desktop) */}
