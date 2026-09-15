@@ -9,6 +9,7 @@ import { VideoSection } from "@/components/site/VideoSection";
 import { Reservation } from "@/components/site/Reservation";
 import { MapSection } from "@/components/site/MapSection";
 import { Footer } from "@/components/site/Footer";
+import { JsonLd } from "@/components/JsonLd";
 
 const title = "Restaurante Punto Verde | Comida colombiana en Almería";
 const description =
@@ -36,6 +37,7 @@ export const Route = createFileRoute("/")({
 function Index() {
   return (
     <div className="bg-ink">
+      <JsonLd />
       <Navbar />
       <main>
         <Hero />
