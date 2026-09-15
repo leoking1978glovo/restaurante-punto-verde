@@ -17,7 +17,7 @@ export function MapSection() {
           </h2>
           <p className="mt-2 flex items-center gap-2 text-base text-ink/60 md:text-lg">
             <MapPin className="h-5 w-5 text-primary" />
-            Calle Miguel Rua, 64 — 04007 Almería, España
+            C. Miguel Rua, 64 — 04007 Almería, España
           </p>
         </motion.div>
 
