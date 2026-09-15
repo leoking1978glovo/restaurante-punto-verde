@@ -10,9 +10,9 @@ import { Reservation } from "@/components/site/Reservation";
 import { MapSection } from "@/components/site/MapSection";
 import { Footer } from "@/components/site/Footer";
 
-const title = "Punto Verde";
+const title = "Restaurante Punto Verde | Comida colombiana en Almería";
 const description =
-  "Punto Verde — Cocina con alma y sabor natural. Un espacio donde cada plato cuenta una historia.";
+  "Restaurante colombiano en Almería. Sancocho, bandeja paisa, arepas y platos típicos con sazón de casa, en C. Miguel Rúa 64. Martes a domingo de 12:00 a 16:30. ¡Reserva tu mesa!";
 
 export const Route = createFileRoute("/")({
   head: () => ({
