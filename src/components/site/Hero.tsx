@@ -3,7 +3,7 @@ import heroBg from "@/assets/hero-bg.jpg";
 import logoPuntoVerde from "@/assets/punto-verde-logo.png";
 import banderaColombia from "@/assets/bandera-de-colombia.png";
 
-const words = ["Tradicion", "y","Sabor"];
+const words = ["Restaurante", "colombiano", "en Almería"];
 
 export function Hero() {
   return (
@@ -47,7 +47,7 @@ export function Hero() {
           transition={{ delay: 0.25, duration: 0.6 }}
           className="mb-6 text-xs font-semibold tracking-[0.4em] text-secondary uppercase"
         >
-          Cocina con alma ·  · Desde 2024
+          Cocina con alma · Desde 2024
         </motion.p>
 
         <h1 className="max-w-[15ch] text-[clamp(3.5rem,13vw,9.5rem)] text-cream">
@@ -72,7 +72,7 @@ export function Hero() {
             className="max-w-md text-base leading-relaxed text-cream/70"
           >
             Ingredientes frescos, recetas tradicionales de Colombia y un espacio donde cada plato cuenta una historia.
-            Un sitio honesto y adictivo en pleno casco urbano de Almeria.
+            Un sitio honesto y adictivo en pleno centro de Almería.
           </motion.p>
 
           {/* BOTÓN RESERVAR MESA: visible en TODOS (móvil + desktop) */}
