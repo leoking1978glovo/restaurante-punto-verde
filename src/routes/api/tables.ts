@@ -4,7 +4,7 @@ import { Redis } from "@upstash/redis";
 const redis = Redis.fromEnv();
 
 const TOTAL_TABLES = Number(process.env.TABLES_TOTAL ?? 10);
-const DURATION_HOURS = 2;
+const DURATION_HOURS = 1.5;
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^\d{2}:\d{2}$/;
