@@ -49,14 +49,26 @@ interface Booking {
 }
 
 // Devuelve las mesas ocupadas que se solapan con la hora pedida
-async function getOccupied(date: string, time: string): Promise<Map<string, Booking>> {
-  const raw = await redis.hgetall<Record<string, string>>(`tables:${date}`);
+async function getOccupied(
+  date: string,
+  time: string,
+): Promise<Map<string, Booking>> {
+  const raw = await redis.hgetall<Record<string, unknown>>(`tables:${date}`);
   const occupied = new Map<string, Booking>();
   if (!raw) return occupied;
   for (const [table, value] of Object.entries(raw)) {
     try {
-      const booking = JSON.parse(value) as Booking;
-      if (overlaps(time, booking.start)) occupied.set(table, booking);
+      // Upstash puede devolver el valor ya deserializado como objeto
+      const booking = (
+        typeof value === "string" ? JSON.parse(value) : value
+      ) as Booking;
+      if (
+        booking &&
+        typeof booking.start === "string" &&
+        overlaps(time, booking.start)
+      ) {
+        occupied.set(table, booking);
+      }
     } catch {
       // valor corrupto: lo ignoramos
     }
@@ -68,7 +80,8 @@ export const Route = createFileRoute("/api/tables")({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        if (!isAuthorized(request)) return json({ ok: false, error: "unauthorized" }, 401);
+        if (!isAuthorized(request))
+          return json({ ok: false, error: "unauthorized" }, 401);
 
         const url = new URL(request.url);
         const date = url.searchParams.get("date") ?? "";
@@ -76,7 +89,10 @@ export const Route = createFileRoute("/api/tables")({
 
         if (!DATE_RE.test(date) || !TIME_RE.test(time)) {
           return json(
-            { ok: false, error: "Parametros invalidos. Usa date=YYYY-MM-DD y time=HH:MM" },
+            {
+              ok: false,
+              error: "Parametros invalidos. Usa date=YYYY-MM-DD y time=HH:MM",
+            },
             400,
           );
         }
@@ -101,7 +117,8 @@ export const Route = createFileRoute("/api/tables")({
       },
 
       POST: async ({ request }) => {
-        if (!isAuthorized(request)) return json({ ok: false, error: "unauthorized" }, 401);
+        if (!isAuthorized(request))
+          return json({ ok: false, error: "unauthorized" }, 401);
 
         let body: {
           action?: string;
@@ -121,12 +138,17 @@ export const Route = createFileRoute("/api/tables")({
 
         if (
           (action !== "hold" && action !== "release") ||
-          !date || !TIME_RE.test(date) && !DATE_RE.test(date) ||
-          !date || !DATE_RE.test(date) ||
-          !time || !TIME_RE.test(time)
+          !date ||
+          !DATE_RE.test(date) ||
+          !time ||
+          !TIME_RE.test(time)
         ) {
           return json(
-            { ok: false, error: "Parametros invalidos. Requiere action ('hold'|'release'), date=YYYY-MM-DD, time=HH:MM" },
+            {
+              ok: false,
+              error:
+                "Parametros invalidos. Requiere action ('hold'|'release'), date=YYYY-MM-DD, time=HH:MM",
+            },
             400,
           );
         }
