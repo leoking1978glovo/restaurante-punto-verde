@@ -20,7 +20,6 @@ function timeToMinutes(time: string): number {
   return h * 60 + m;
 }
 
-// Dos reservas se solapan si sus ventanas de 2 horas se cruzan
 function overlaps(a: string, b: string): boolean {
   const startA = timeToMinutes(a);
   const startB = timeToMinutes(b);
@@ -30,7 +29,7 @@ function overlaps(a: string, b: string): boolean {
 
 function isAuthorized(request: Request): boolean {
   const expected = process.env.TABLES_API_KEY;
-  if (!expected) return true; // en local, sin variable, no exige clave
+  if (!expected) return true;
   return request.headers.get("x-api-key") === expected;
 }
 
@@ -48,7 +47,18 @@ interface Booking {
   createdAt: string;
 }
 
-// Devuelve las mesas ocupadas que se solapan con la hora pedida
+function parseBooking(value: unknown): Booking | null {
+  try {
+    const booking = (
+      typeof value === "string" ? JSON.parse(value) : value
+    ) as Booking;
+    if (booking && typeof booking.start === "string") return booking;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 async function getOccupied(
   date: string,
   time: string,
@@ -57,21 +67,8 @@ async function getOccupied(
   const occupied = new Map<string, Booking>();
   if (!raw) return occupied;
   for (const [table, value] of Object.entries(raw)) {
-    try {
-      // Upstash puede devolver el valor ya deserializado como objeto
-      const booking = (
-        typeof value === "string" ? JSON.parse(value) : value
-      ) as Booking;
-      if (
-        booking &&
-        typeof booking.start === "string" &&
-        overlaps(time, booking.start)
-      ) {
-        occupied.set(table, booking);
-      }
-    } catch {
-      // valor corrupto: lo ignoramos
-    }
+    const booking = parseBooking(value);
+    if (booking && overlaps(time, booking.start)) occupied.set(table, booking);
   }
   return occupied;
 }
@@ -84,6 +81,27 @@ export const Route = createFileRoute("/api/tables")({
           return json({ ok: false, error: "unauthorized" }, 401);
 
         const url = new URL(request.url);
+
+        // Modo busqueda: GET /api/tables?phone=XXXXXXXXX
+        const phone = url.searchParams.get("phone");
+        if (phone) {
+          const keys = await redis.keys("tables:*");
+          const reservations = [];
+          for (const key of keys) {
+            const date = key.replace("tables:", "");
+            const raw = await redis.hgetall<Record<string, unknown>>(key);
+            if (!raw) continue;
+            for (const [table, value] of Object.entries(raw)) {
+              const booking = parseBooking(value);
+              if (booking && booking.phone === phone) {
+                reservations.push({ date, table, ...booking });
+              }
+            }
+          }
+          return json({ ok: true, phone, reservations });
+        }
+
+        // Modo disponibilidad: GET /api/tables?date=YYYY-MM-DD&time=HH:MM
         const date = url.searchParams.get("date") ?? "";
         const time = url.searchParams.get("time") ?? "";
 
@@ -91,7 +109,8 @@ export const Route = createFileRoute("/api/tables")({
           return json(
             {
               ok: false,
-              error: "Parametros invalidos. Usa date=YYYY-MM-DD y time=HH:MM",
+              error:
+                "Parametros invalidos. Usa date=YYYY-MM-DD y time=HH:MM, o phone=XXXXXXXXX",
             },
             400,
           );
@@ -161,7 +180,6 @@ export const Route = createFileRoute("/api/tables")({
           return json({ ok: true, released: table });
         }
 
-        // action === "hold"
         const occupied = await getOccupied(date, time);
         const freeTables = tableIds().filter((t) => !occupied.has(t));
 
@@ -177,8 +195,8 @@ export const Route = createFileRoute("/api/tables")({
           );
         }
 
-        // Si el agente no indica mesa, asigna la primera libre
-        const chosen = table && freeTables.includes(table) ? table : freeTables[0];
+        const chosen =
+          table && freeTables.includes(table) ? table : freeTables[0];
 
         const booking: Booking = {
           start: time,
@@ -187,7 +205,6 @@ export const Route = createFileRoute("/api/tables")({
           createdAt: new Date().toISOString(),
         };
 
-        // hsetnx es atomico: si la mesa ya esta ocupada, no la pisa
         const result = await redis.hsetnx(key, chosen, JSON.stringify(booking));
 
         if (result === 0) {
