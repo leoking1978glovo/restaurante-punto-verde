@@ -44,6 +44,7 @@ interface Booking {
   start: string;
   name: string;
   phone: string;
+  notes: string;
   createdAt: string;
 }
 
@@ -82,7 +83,6 @@ export const Route = createFileRoute("/api/tables")({
 
         const url = new URL(request.url);
 
-        // Modo busqueda: GET /api/tables?phone=XXXXXXXXX
         const phone = url.searchParams.get("phone");
         if (phone) {
           const keys = await redis.keys("tables:*");
@@ -101,7 +101,6 @@ export const Route = createFileRoute("/api/tables")({
           return json({ ok: true, phone, reservations });
         }
 
-        // Modo disponibilidad: GET /api/tables?date=YYYY-MM-DD&time=HH:MM
         const date = url.searchParams.get("date") ?? "";
         const time = url.searchParams.get("time") ?? "";
 
@@ -131,6 +130,7 @@ export const Route = createFileRoute("/api/tables")({
             table,
             start: b.start,
             name: b.name,
+            notes: b.notes,
           })),
         });
       },
@@ -146,6 +146,7 @@ export const Route = createFileRoute("/api/tables")({
           table?: string;
           name?: string;
           phone?: string;
+          notes?: string;
         };
         try {
           body = await request.json();
@@ -153,7 +154,7 @@ export const Route = createFileRoute("/api/tables")({
           return json({ ok: false, error: "Body JSON invalido" }, 400);
         }
 
-        const { action, date, time, table, name, phone } = body;
+        const { action, date, time, table, name, phone, notes } = body;
 
         if (
           (action !== "hold" && action !== "release") ||
@@ -202,6 +203,7 @@ export const Route = createFileRoute("/api/tables")({
           start: time,
           name: name ?? "",
           phone: phone ?? "",
+          notes: notes ?? "",
           createdAt: new Date().toISOString(),
         };
 

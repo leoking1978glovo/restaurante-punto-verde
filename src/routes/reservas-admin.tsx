@@ -17,6 +17,7 @@ const adminAction = createServerFn({ method: "POST" })
       table?: string;
       name?: string;
       phone?: string;
+      notes?: string;
     }) => d,
   )
   .handler(async ({ data }) => {
@@ -55,6 +56,7 @@ const adminAction = createServerFn({ method: "POST" })
           start: string;
           name: string;
           phone: string;
+          notes?: string;
         };
         return b && typeof b.start === "string" ? b : null;
       } catch {
@@ -94,7 +96,7 @@ const adminAction = createServerFn({ method: "POST" })
     }
 
     if (data.action === "add") {
-      const { date, time, name, phone } = data;
+      const { date, time, name, phone, notes } = data;
       if (
         !date ||
         !DATE_RE.test(date) ||
@@ -128,6 +130,7 @@ const adminAction = createServerFn({ method: "POST" })
           start: time,
           name,
           phone,
+          notes: notes ?? "",
           createdAt: new Date().toISOString(),
         }),
       );
@@ -155,6 +158,7 @@ function AdminReservas() {
     phone: "",
     time: "15:00",
     table: "",
+    notes: "",
   });
 
   async function call(payload: any) {
@@ -298,7 +302,9 @@ function AdminReservas() {
               <div style={{ fontSize: 13 }}>
                 {t.free
                   ? "Libre"
-                  : `${t.booking.start} — ${t.booking.name}`}
+                  : `${t.booking.start} — ${t.booking.name}${
+                      t.booking.notes ? ` (${t.booking.notes})` : ""
+                    }`}
               </div>
             </div>
           ))}
@@ -320,8 +326,8 @@ function AdminReservas() {
             }}
           >
             <span>
-              <strong>{r.start}</strong> — Mesa {r.table} — {r.name} —{" "}
-              {r.phone}
+              <strong>{r.start}</strong> — Mesa {r.table} — {r.name} — {r.phone}
+              {r.notes ? ` — 📝 ${r.notes}` : ""}
             </span>
             <button
               onClick={() => call({ action: "cancel", date, table: r.table })}
@@ -373,6 +379,12 @@ function AdminReservas() {
             value={form.table}
             onChange={(e) => setForm({ ...form, table: e.target.value })}
             style={{ padding: 8, borderRadius: 6, border: "none", width: 100 }}
+          />
+          <input
+            placeholder="Notas (cumpleanos, alergias...)"
+            value={form.notes}
+            onChange={(e) => setForm({ ...form, notes: e.target.value })}
+            style={{ padding: 8, borderRadius: 6, border: "none", flex: 1, minWidth: 180 }}
           />
           <button
             onClick={() => call({ action: "add", date, ...form })}
