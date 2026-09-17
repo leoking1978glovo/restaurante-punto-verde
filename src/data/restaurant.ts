@@ -46,9 +46,19 @@ export const dishes: Dish[] = [
   },
 ];
 
+export type MenuItemChoice = {
+  label: string;
+  options: string[];
+};
+
 export type MenuCategory = {
   title: string;
-  items: { name: string; description: string; price: string }[];
+  items: {
+    name: string;
+    description: string;
+    price: string;
+    choices?: MenuItemChoice[];
+  }[];
 };
 
 export const menu: MenuCategory[] = [
@@ -78,7 +88,27 @@ export const menu: MenuCategory[] = [
   {
     title: "Menú del día",
     items: [
-      { name: "Arroz, frijoles, ensalada, papa a la francesa, sopa, proteína y bebida", description: "A elección y disponibilidad. Proteína: chicharrón, churrasco, costillas BBQ, pollo broster,  pollo a la plancha. Bebidas: coca cola, fanta, aquarius.", price: "12.00\u00A0€" },
+      {
+        name: "Arroz, frijoles, ensalada, papa a la francesa, sopa, proteína y bebida",
+        description: "A elección y disponibilidad. Proteína: chicharrón, churrasco, costillas BBQ, pollo broster, cerdo o pollo a la plancha. Bebidas: coca cola, fanta, aquarius.",
+        price: "12.00\u00A0€",
+        choices: [
+          {
+            label: "Elige tu proteína",
+            options: [
+              "Chicharrón",
+              "Churrasco",
+              "Costillas BBQ",
+              "Pollo broster",
+              "Pollo a la plancha",
+            ],
+          },
+          {
+            label: "Elige tu bebida",
+            options: ["Coca Cola", "Fanta", "Aquarius"],
+          },
+        ],
+      },
       { name: "Menú infantil", description: "Pollo broster o nuggets (a elección y/o disponibilidad), papa francesa y helado.", price: "8.00\u00A0€" },
     ],
   },

@@ -4,12 +4,15 @@ import { menu } from "@/data/restaurant";
 import { useCart } from "@/lib/cart-context";
 import { ShoppingCart, X, Check, ArrowLeft, ArrowRight, ChevronRight } from "lucide-react";
 
+type MenuChoice = { label: string; options: string[] };
+
 type SelectedItem = {
   id: string;
   name: string;
   price: string;
   priceValue: number;
   category: string;
+  choices?: MenuChoice[];
 } | null;
 
 function parsePrice(priceStr: string): number {
@@ -23,6 +26,10 @@ const GAP = 20;
 export function MenuPreview() {
   const { addItem } = useCart();
   const [selectedItem, setSelectedItem] = useState<SelectedItem>(null);
+
+  // Elecciones del cliente DENTRO de la ventanita del Menú del día.
+  // Guarda, para el plato abierto, qué opción eligió en cada grupo (proteína, bebida...).
+  const [modalChoices, setModalChoices] = useState<Record<number, string>>({});
 
   const viewportRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -72,37 +79,77 @@ export function MenuPreview() {
     snapTo(x.get() - dir * itemWidth());
   };
 
+  const getItemId = (item: { name: string }, category: string) =>
+    `${category}-${item.name}`
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^\w-]/g, "");
+
+  // Marca o desmarca una opción dentro de la ventanita (permite cambiar de idea)
+  const toggleModalChoice = (groupIndex: number, option: string) => {
+    setModalChoices((prev) => {
+      const next = { ...prev };
+      if (next[groupIndex] === option) {
+        delete next[groupIndex];
+      } else {
+        next[groupIndex] = option;
+      }
+      return next;
+    });
+  };
+
+  // True si el plato abierto tiene grupos de elección y TODOS están elegidos
+  const modalReady =
+    !selectedItem?.choices ||
+    selectedItem.choices.length === 0 ||
+    selectedItem.choices.every((_, i) => Boolean(modalChoices[i]));
+
   const handlePriceClick = (
     item: {
       name: string;
       price: string;
       description: string;
+      choices?: MenuChoice[];
     },
     category: string,
   ) => {
-    const id = `${category}-${item.name}`
-      .toLowerCase()
-      .replace(/\s+/g, "-")
-      .replace(/[^\w-]/g, "");
-
+    setModalChoices({}); // ventanita nueva, elecciones vacías
     setSelectedItem({
-      id,
+      id: getItemId(item, category),
       name: item.name,
       price: item.price,
       priceValue: parsePrice(item.price),
       category,
+      choices: item.choices,
     });
   };
 
   const handleConfirm = () => {
-    if (!selectedItem) return;
-    addItem({
-      id: selectedItem.id,
-      name: selectedItem.name,
-      price: selectedItem.price,
-      priceValue: selectedItem.priceValue,
-      category: selectedItem.category,
-    });
+    if (!selectedItem || !modalReady) return;
+
+    // Platos con elección (Menú del día): el nombre lleva las opciones elegidas
+    if (selectedItem.choices && selectedItem.choices.length > 0) {
+      const chosen = selectedItem.choices.map((g, i) => modalChoices[i]);
+      const nameWithChoices = `${selectedItem.name} (${chosen.join(" + ")})`;
+      addItem({
+        id: `${selectedItem.id}-${chosen
+          .join("-")
+          .toLowerCase()
+          .replace(/\s+/g, "-")}`,
+        name: nameWithChoices,
+        price: selectedItem.price,
+        priceValue: selectedItem.priceValue,
+        category: selectedItem.category,
+      });
+    } else {
+      addItem({
+        id: selectedItem.id,
+        name: selectedItem.name,
+        price: selectedItem.price,
+        priceValue: selectedItem.priceValue,
+        category: selectedItem.category,
+      });
+    }
     setSelectedItem(null);
   };
 
@@ -248,7 +295,7 @@ export function MenuPreview() {
               className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl"
             >
               <h3 className="font-display text-xl tracking-tight text-ink">
-                ¿Añadir al pedido?
+                {selectedItem.choices ? "Configura tu menú" : "¿Añadir al pedido?"}
               </h3>
               <p className="mt-2 text-muted-foreground">
                 <span className="font-semibold text-ink">
@@ -259,6 +306,37 @@ export function MenuPreview() {
                   {selectedItem.price}
                 </span>
               </p>
+
+              {selectedItem.choices && (
+                <div className="mt-4 space-y-3">
+                  {selectedItem.choices.map((group, groupIndex) => (
+                    <div key={group.label}>
+                      <p className="text-[11px] font-semibold tracking-wide text-ink/60 uppercase">
+                        {group.label}
+                      </p>
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        {group.options.map((option) => {
+                          const isSelected = modalChoices[groupIndex] === option;
+                          return (
+                            <button
+                              key={option}
+                              type="button"
+                              onClick={() => toggleModalChoice(groupIndex, option)}
+                              className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                                isSelected
+                                  ? "border-primary bg-primary text-cream"
+                                  : "border-primary/30 bg-white text-ink/70 hover:border-primary hover:text-primary"
+                              }`}
+                            >
+                              {option}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               <div className="mt-6 flex gap-3">
                 <button
@@ -272,7 +350,12 @@ export function MenuPreview() {
                 <button
                   type="button"
                   onClick={handleConfirm}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#5F7A3A] py-3 font-semibold text-white transition-colors hover:bg-[#4a602e]"
+                  disabled={!modalReady}
+                  className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-3 font-semibold text-white transition-colors ${
+                    modalReady
+                      ? "bg-[#5F7A3A] hover:bg-[#4a602e]"
+                      : "cursor-not-allowed bg-[#5F7A3A]/40"
+                  }`}
                 >
                   <Check className="h-4 w-4" />
                   Sí, añadir
