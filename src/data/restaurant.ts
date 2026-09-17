@@ -90,7 +90,7 @@ export const menu: MenuCategory[] = [
     items: [
       {
         name: "Arroz, frijoles, ensalada, papa a la francesa, sopa, proteína y bebida",
-        description: "A elección y disponibilidad. Proteína: chicharrón, churrasco, costillas BBQ, pollo broster, cerdo o pollo a la plancha. Bebidas: coca cola, fanta, aquarius.",
+        description: "A elección y disponibilidad. Proteína: chicharrón, churrasco, costillas BBQ, pollo broster, cerdo o pollo a la plancha. Bebidas: coca cola, fanta, aquarius, agua de panela o agua.",
         price: "12.00\u00A0€",
         choices: [
           {
@@ -105,7 +105,7 @@ export const menu: MenuCategory[] = [
           },
           {
             label: "Elige tu bebida",
-            options: ["Coca Cola", "Fanta", "Aquarius"],
+            options: ["Coca Cola", "Fanta", "Aquarius", "Agua de panela", "Agua"],
           },
         ],
       },
