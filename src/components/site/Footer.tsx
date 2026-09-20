@@ -59,7 +59,7 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-14 flex flex-col gap-4 border-t border-cream/15 pt-6 md:flex-row md:items-center md:justify-between">
+        <div className="mt-14 flex flex-col gap-4 border-t border-cream/15 pt-6 md:flex-row md:items-center md:justify-between md:pr-32">
           <p className="text-xs tracking-widest text-cream/35 uppercase">
             © {new Date().getFullYear()} Punto Verde
           </p>
