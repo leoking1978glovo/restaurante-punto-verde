@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   ShoppingCart,
@@ -6,13 +7,16 @@ import {
   Minus,
   Trash2,
   ChefHat,
+  CheckCircle2,
 } from "lucide-react";
 import { useCart } from "@/lib/cart-context";
 import { getOrderStatus } from "@/lib/order-status";
+import { saveLastOrder, formatOrderNumber } from "@/lib/last-order";
 
 export function CartDrawer() {
   const { items, isOpen, closeCart, updateQuantity, removeItem, totalPrice, clearCart } =
     useCart();
+  const [sentTicket, setSentTicket] = useState<string | null>(null);
 
   const handlePedirAhora = async () => {
     if (items.length === 0) return;
@@ -42,22 +46,35 @@ export function CartDrawer() {
 
     const total = totalPrice.toFixed(2).replace(".", ",");
 
+    // Guardar el ticket en el "cajón aparte" (sobrevive a la X del chat)
+    const saved = saveLastOrder({ lines, total });
+    const orderRef = formatOrderNumber(saved.number);
+
     const message = `Hola Santiago, acabo de confirmar mi pedido desde la web:
+
+📋 PEDIDO WEB ${orderRef}
 
 ${lines.join("\n")}
 
 💰 Total: ${total} €
 
-¿Podrías procesarlo y confirmarme cuando esté listo?`;
+Por favor confírmame el pedido con este mismo número ${orderRef} y el tiempo estimado de preparación.`;
 
-    clearCart();
-    closeCart();
+    // 1) Mostrar confirmación visual dentro del carrito
+    setSentTicket(orderRef);
 
-    window.dispatchEvent(
-      new CustomEvent("santiago-pending-message", {
-        detail: { message },
-      })
-    );
+    // 2) Tras un momento: cerrar carrito y abrir el chat de Santiago
+    setTimeout(() => {
+      clearCart();
+      closeCart();
+      setSentTicket(null);
+
+      window.dispatchEvent(
+        new CustomEvent("santiago-pending-message", {
+          detail: { message },
+        })
+      );
+    }, 1600);
   };
 
   return (
@@ -78,6 +95,36 @@ ${lines.join("\n")}
             transition={{ type: "spring", damping: 28, stiffness: 280 }}
             className="relative flex h-full w-full max-w-md flex-col bg-cream shadow-2xl"
           >
+            <AnimatePresence>
+              {sentTicket && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-cream px-8 text-center"
+                >
+                  <motion.div
+                    initial={{ scale: 0.5, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: "spring", damping: 12, stiffness: 200, delay: 0.1 }}
+                  >
+                    <CheckCircle2 className="h-20 w-20 text-[#5F7A3A]" />
+                  </motion.div>
+                  <div>
+                    <p className="font-display text-2xl tracking-tight text-ink">
+                      ¡Pedido enviado!
+                    </p>
+                    <p className="mt-1 font-display text-lg text-primary">
+                      {sentTicket}
+                    </p>
+                    <p className="mt-2 text-sm text-ink/60">
+                      Santiago te lo confirma ahora mismo en el chat
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             <div className="flex items-center justify-between border-b border-ink/10 px-6 py-5">
               <h2 className="flex items-center gap-3 font-display text-2xl tracking-tight text-ink">
                 <ShoppingCart className="h-6 w-6 text-primary" />

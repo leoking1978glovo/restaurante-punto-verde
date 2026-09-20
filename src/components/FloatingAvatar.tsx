@@ -1,7 +1,14 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { Receipt, X as XIcon } from "lucide-react";
 import ChatWidgetPanel from "@/components/ChatWidgetPanel";
 import { CHAT_AGENT_NAME } from "@/config/chatAgent";
+import {
+  loadLastOrder,
+  clearLastOrder,
+  formatOrderNumber,
+  type LastOrder,
+} from "@/lib/last-order";
 
 const CHAT_AGENT_ID = '8054b867-8ce4-4250-8710-44feaa2cf640';
 const CHAT_STORAGE_KEY = `r-${CHAT_AGENT_ID}`;
@@ -20,6 +27,15 @@ export default function FloatingAvatar({
   const [isVisible, setIsVisible] = useState(false);
   const [chatKey, setChatKey] = useState(0);
   const [localPendingMessage, setLocalPendingMessage] = useState<string | null>(null);
+  const [lastOrder, setLastOrder] = useState<LastOrder | null>(null);
+  const [ticketOpen, setTicketOpen] = useState(false);
+
+  useEffect(() => {
+    const refresh = () => setLastOrder(loadLastOrder());
+    refresh();
+    window.addEventListener("pv-order-saved", refresh);
+    return () => window.removeEventListener("pv-order-saved", refresh);
+  }, []);
 
   const effectivePendingMessage = localPendingMessage ?? externalPendingMessage ?? null;
 
@@ -114,6 +130,16 @@ export default function FloatingAvatar({
       `}</style>
 
       <div className={`fixed bottom-6 right-6 z-50 transition-all duration-500 ease-out ${isVisible ? "translate-y-0 opacity-100" : "translate-y-20 opacity-0"}`}>
+        {lastOrder && (
+          <button
+            onClick={() => setTicketOpen(true)}
+            className="absolute bottom-full right-0 mb-3 flex items-center gap-2 rounded-2xl bg-white px-4 py-2 text-xs font-bold text-[#5F7A3A] shadow-lg transition-transform hover:scale-105"
+            aria-label="Ver mi último pedido"
+          >
+            <Receipt className="h-4 w-4" />
+            Mi pedido {formatOrderNumber(lastOrder.number)}
+          </button>
+        )}
         <div className="animate-float flex items-center gap-2">
           <div className="relative whitespace-nowrap rounded-2xl bg-white px-3 py-1.5 text-[11px] font-bold text-gray-700 shadow-md pointer-events-none select-none">
             Santiago
@@ -126,6 +152,80 @@ export default function FloatingAvatar({
           </button>
         </div>
       </div>
+
+      <AnimatePresence>
+        {ticketOpen && lastOrder && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setTicketOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: "spring", damping: 22, stiffness: 300 }}
+              className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl"
+              role="dialog"
+              aria-label="Ticket de mi último pedido"
+            >
+              <button
+                onClick={() => setTicketOpen(false)}
+                className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-ink/40 transition-colors hover:bg-ink/5 hover:text-ink"
+                aria-label="Cerrar ticket"
+              >
+                <XIcon className="h-4 w-4" />
+              </button>
+
+              <p className="text-center text-xs font-bold tracking-[0.3em] text-ink/40 uppercase">
+                Pedido confirmado
+              </p>
+              <p className="mt-1 text-center font-display text-3xl text-[#5F7A3A]">
+                {formatOrderNumber(lastOrder.number)}
+              </p>
+
+              <div className="mt-5 border-t-2 border-dashed border-ink/15 pt-4">
+                <ul className="space-y-2 text-sm text-ink">
+                  {lastOrder.lines.map((line, i) => (
+                    <li key={i} className="flex justify-between gap-3">
+                      <span>{line.replace(/^- /, "").split(" = ")[0]}</span>
+                      <span className="shrink-0 font-semibold">
+                        {line.split(" = ")[1]}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="mt-4 flex items-center justify-between border-t-2 border-dashed border-ink/15 pt-4">
+                <span className="font-display text-lg text-ink">Total</span>
+                <span className="font-display text-2xl text-[#5F7A3A]">
+                  {lastOrder.total} €
+                </span>
+              </div>
+
+              <p className="mt-4 text-center text-xs leading-relaxed text-ink/50">
+                📍 Recoge en C. Miguel Rúa, 64 · Almería
+                <br />
+                Muestra este ticket al llegar
+              </p>
+
+              <button
+                onClick={() => {
+                  clearLastOrder();
+                  setTicketOpen(false);
+                }}
+                className="mt-5 w-full text-center text-xs text-ink/40 underline transition-colors hover:text-red-500"
+              >
+                Ya recogí mi pedido (borrar ticket)
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {isOpen && (
