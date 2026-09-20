@@ -141,7 +141,7 @@ export default function FloatingAvatar({
                     <h3 className="font-display text-sm font-bold text-white">{CHAT_AGENT_NAME}</h3>
                     <p className="flex items-center gap-1.5 text-xs text-white/90">
                       <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
-                      En línea - Asistente de Pedidos
+                      Asistente virtual con IA
                     </p>
                   </div>
                 </div>
