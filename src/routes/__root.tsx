@@ -13,6 +13,7 @@ import {
 import { useEffect, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import FloatingAvatar from "@/components/FloatingAvatar";
+import { CookieBanner } from "@/components/CookieBanner";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -117,18 +118,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { rel: "icon", href: "/favicon-32x32.png", type: "image/png" },
     ],
-    scripts: [
-      {
-        src: "https://www.googletagmanager.com/gtag/js?id=G-Y3V39LHJZZ",
-        async: true,
-      },
-      {
-        children: `window.dataLayer = window.dataLayer || [];
-function gtag(){dataLayer.push(arguments);}
-gtag('js', new Date());
-gtag('config', 'G-Y3V39LHJZZ');`,
-      },
-    ],
   }),
   shellComponent: RootShell,
   component: RootComponent,
@@ -161,6 +150,7 @@ function RootComponent() {
         <FloatingAvatar />
         <CartDrawer />
         <ScrollToTop />
+        <CookieBanner />
       </QueryClientProvider>
     </CartProvider>
   );
