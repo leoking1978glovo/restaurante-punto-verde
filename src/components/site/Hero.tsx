@@ -27,17 +27,17 @@ export function Hero() {
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.1, duration: 0.7, ease: [0.2, 0.8, 0.2, 1] }}
-          className="mb-8 flex items-center gap-4"
+          className="mb-8 flex items-center gap-4 pl-28 md:pl-36"
         >
           <img
             src={logoPuntoVerde}
             alt="Punto Verde - Gastronomía Colombiana"
-            className="h-20 w-auto md:h-28 drop-shadow-[0_4px_20px_rgba(0,0,0,0.5)]"
+            className="h-20 w-auto md:h-24 drop-shadow-[0_4px_20px_rgba(0,0,0,0.5)]"
           />
           <img
             src={banderaColombia}
             alt="Bandera de Colombia"
-            className="h-12 w-auto md:h-16 drop-shadow-[0_4px_20px_rgba(0,0,0,0.5)]"
+            className="h-10 w-auto md:h-12 drop-shadow-[0_4px_20px_rgba(0,0,0,0.5)]"
           />
         </motion.div>
 
