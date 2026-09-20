@@ -27,7 +27,7 @@ export function Hero() {
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.1, duration: 0.7, ease: [0.2, 0.8, 0.2, 1] }}
-          className="mb-8 flex items-center gap-4 pl-28 md:pl-36"
+          className="mb-8 flex items-center gap-4 md:pl-56"
         >
           <img
             src={logoPuntoVerde}
