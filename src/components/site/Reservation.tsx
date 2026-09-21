@@ -1,5 +1,6 @@
 import { motion } from "motion/react";
 import { MessageCircle } from "lucide-react";
+import avatarSantiago from "@/assets/avatar-santiago-bubble.png";
 
 export function Reservation() {
   const handleOpenChat = () => {
@@ -35,7 +36,11 @@ export function Reservation() {
         >
           {/* IMAGEN DEL CHEF */}
           <div className="relative">
-            <div className="text-[8rem] md:text-[10rem] leading-none">🧑‍🍳</div>
+            <img
+              src={avatarSantiago}
+              alt="Santiago, asistente de reservas"
+              className="h-40 w-40 rounded-full object-cover border-4 border-[#5F7A3A] shadow-xl md:h-48 md:w-48"
+            />
             <span className="absolute bottom-2 right-2 h-6 w-6 rounded-full bg-emerald-500 border-4 border-ink" />
           </div>
 
