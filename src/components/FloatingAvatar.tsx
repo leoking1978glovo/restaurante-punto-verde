@@ -9,6 +9,7 @@ import {
   formatOrderNumber,
   type LastOrder,
 } from "@/lib/last-order";
+import avatarSantiago from "@/assets/avatar-santiago-bubble.png";
 
 const CHAT_AGENT_ID = '8054b867-8ce4-4250-8710-44feaa2cf640';
 const CHAT_STORAGE_KEY = `r-${CHAT_AGENT_ID}`;
@@ -146,7 +147,7 @@ export default function FloatingAvatar({
             <span className="absolute -right-[3px] top-1/2 h-1.5 w-1.5 -translate-y-1/2 rotate-45 bg-white" />
           </div>
           <button onClick={handleAvatarClick} className="relative flex h-16 w-16 cursor-pointer items-center justify-center rounded-full border-4 border-white bg-[#5F7A3A] shadow-lg shadow-[#5F7A3A]/30 transition-all duration-500 ease-out hover:scale-110 hover:shadow-xl hover:shadow-[#5F7A3A]/50" aria-label="Abrir chat con Santiago" title="Habla con Santiago">
-            <span className="text-4xl" role="img" aria-label="Chef Santiago">🧑‍🍳</span>
+            <img src={avatarSantiago} alt="Santiago" className="h-full w-full rounded-full object-cover" />
             <span className="absolute bottom-0 right-0 z-10 h-5 w-5 rounded-full border-[3px] border-white bg-emerald-500" />
             <span className="pointer-events-none absolute -top-3 -left-3 z-20 animate-wave text-2xl">🔔</span>
           </button>
@@ -235,7 +236,7 @@ export default function FloatingAvatar({
               <div className="flex items-center justify-between bg-[#5F7A3A] px-4 py-3 text-white">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-white/50 bg-white/20">
-                    <span className="text-2xl" role="img" aria-label="Chef Santiago">🧑‍🍳</span>
+                    <img src={avatarSantiago} alt="Santiago" className="h-full w-full rounded-full object-cover" />
                   </div>
                   <div>
                     <h3 className="font-display text-sm font-bold text-white">{CHAT_AGENT_NAME}</h3>
