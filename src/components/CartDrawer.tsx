@@ -48,13 +48,14 @@ export function CartDrawer() {
     const total = totalPrice.toFixed(2).replace(".", ",");
 
     // Guardar el ticket en el "cajón aparte" (sobrevive a la X del chat)
-    const { number } = await createOrderRef();
+    const { number, token } = await createOrderRef();
     const saved = saveLastOrder({ lines, total, number });
     const orderRef = formatOrderNumber(saved.number);
 
     const message = `Hola Santiago, acabo de confirmar mi pedido desde la web:
 
 📋 PEDIDO WEB ${orderRef}
+🔑 Clave: ${token}
 
 ${lines.join("\n")}
 
