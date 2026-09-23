@@ -17,8 +17,14 @@ export const getOrderStatus = createServerFn({ method: "GET" }).handler(
 );
 
 export const setOrderStatus = createServerFn({ method: "POST" })
-  .validator((data: { open: boolean }) => data)
+  .validator((data: { open: boolean; password: string }) => data)
   .handler(async ({ data }) => {
+    if (
+      !process.env.ADMIN_PASSWORD ||
+      data.password !== process.env.ADMIN_PASSWORD
+    ) {
+      throw new Error("No autorizado");
+    }
     await redis.set("orders:open", data.open);
     return { open: data.open };
   });

@@ -16,13 +16,18 @@ function AdminPage() {
 
   const toggle = async () => {
     if (status === null) return;
+    const password = window.prompt("Contraseña de administrador:");
+    if (!password) return;
     setLoading(true);
     const next = !status;
-    await setOrderStatus({ data: { open: next } });
-    setStatus(next);
+    try {
+      await setOrderStatus({ data: { open: next, password } });
+      setStatus(next);
+    } catch {
+      alert("Contraseña incorrecta");
+    }
     setLoading(false);
   };
-
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-ink px-4">
       <h1 className="mb-8 text-4xl text-cream">Panel de Control</h1>
