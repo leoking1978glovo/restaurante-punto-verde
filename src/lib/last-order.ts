@@ -8,10 +8,13 @@ export interface LastOrder {
   date: number;
 }
 
-export function saveLastOrder(order: Omit<LastOrder, "number" | "date">) {
+export function saveLastOrder(
+  order: Omit<LastOrder, "number" | "date"> & { number: number }
+) {
   const full: LastOrder = {
-    ...order,
-    number: getNextOrderNumber(),
+    lines: order.lines,
+    total: order.total,
+    number: order.number,
     date: Date.now(),
   };
   localStorage.setItem(LAST_ORDER_KEY, JSON.stringify(full));

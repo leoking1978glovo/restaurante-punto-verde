@@ -12,6 +12,7 @@ import {
 import { useCart } from "@/lib/cart-context";
 import { getOrderStatus } from "@/lib/order-status";
 import { saveLastOrder, formatOrderNumber } from "@/lib/last-order";
+import { createOrderRef } from "@/lib/order-ref";
 
 export function CartDrawer() {
   const { items, isOpen, closeCart, updateQuantity, removeItem, totalPrice, clearCart } =
@@ -47,7 +48,8 @@ export function CartDrawer() {
     const total = totalPrice.toFixed(2).replace(".", ",");
 
     // Guardar el ticket en el "cajón aparte" (sobrevive a la X del chat)
-    const saved = saveLastOrder({ lines, total });
+    const { number } = await createOrderRef();
+    const saved = saveLastOrder({ lines, total, number });
     const orderRef = formatOrderNumber(saved.number);
 
     const message = `Hola Santiago, acabo de confirmar mi pedido desde la web:
