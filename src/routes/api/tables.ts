@@ -29,7 +29,7 @@ function overlaps(a: string, b: string): boolean {
 
 function isAuthorized(request: Request): boolean {
   const expected = process.env.TABLES_API_KEY;
-  if (!expected) return true;
+  if (!expected) return false;
   return request.headers.get("x-api-key") === expected;
 }
 
@@ -129,8 +129,6 @@ export const Route = createFileRoute("/api/tables")({
           occupied: [...occupied.entries()].map(([table, b]) => ({
             table,
             start: b.start,
-            name: b.name,
-            notes: b.notes,
           })),
         });
       },
