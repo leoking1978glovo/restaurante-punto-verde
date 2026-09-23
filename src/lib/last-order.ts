@@ -1,5 +1,4 @@
 const LAST_ORDER_KEY = "pv-last-order";
-const ORDER_COUNTER_KEY = "pv-order-counter";
 const EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 horas
 
 export interface LastOrder {
@@ -7,13 +6,6 @@ export interface LastOrder {
   lines: string[];
   total: string;
   date: number;
-}
-
-export function getNextOrderNumber(): number {
-  const current = parseInt(localStorage.getItem(ORDER_COUNTER_KEY) ?? "0", 10);
-  const next = current + 1;
-  localStorage.setItem(ORDER_COUNTER_KEY, String(next));
-  return next;
 }
 
 export function saveLastOrder(order: Omit<LastOrder, "number" | "date">) {
