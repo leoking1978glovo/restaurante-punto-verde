@@ -226,7 +226,7 @@ const ChatWidgetPanel: React.FC<ChatWidgetPanelProps> = ({
         <div ref={messagesEndRef} />
       </div>
       <form onSubmit={handleSubmit} className="flex items-center gap-2 px-3 py-3 border-t border-[#e5e5e5] bg-white">
-        <input ref={inputRef} type="text" value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder="Escribe tu mensaje..." disabled={isLoading || !!error} className="flex-1 rounded-lg border border-[#d4d4d4] bg-[#f5f5f5] px-4 py-2.5 text-lg text-[#1a1a1a] placeholder:text-[#a3a3a3] focus:outline-none focus:ring-2 focus:ring-[#5F7A3A] focus:border-[#5F7A3A] disabled:opacity-50" aria-label="Mensaje para el asistente" />
+        <input ref={inputRef} type="text" maxLength={500} value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder="Escribe tu mensaje..." disabled={isLoading || !!error} className="flex-1 rounded-lg border border-[#d4d4d4] bg-[#f5f5f5] px-4 py-2.5 text-lg text-[#1a1a1a] placeholder:text-[#a3a3a3] focus:outline-none focus:ring-2 focus:ring-[#5F7A3A] focus:border-[#5F7A3A] disabled:opacity-50" aria-label="Mensaje para el asistente" />
         <button type="submit" disabled={isLoading || isTyping || !!error || !inputValue.trim()} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#5F7A3A] text-white transition-colors hover:bg-[#4a602e] disabled:opacity-40 disabled:hover:bg-[#5F7A3A]" aria-label="Enviar mensaje">
           <SendHorizonal className="h-5 w-5" />
         </button>
