@@ -13,7 +13,7 @@ export function JsonLd() {
         streetAddress: "Calle Miguel Rúa, 64",
         addressLocality: "Almería",
         addressRegion: "Andalucía",
-        postalCode: "04007",
+        postalCode: "04009",
         addressCountry: "ES",
       },
       openingHoursSpecification: [

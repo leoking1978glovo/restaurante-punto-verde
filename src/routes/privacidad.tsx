@@ -37,7 +37,7 @@ function PrivacidadPage() {
           <ul className="list-disc pl-6 space-y-1">
             <li><strong>Responsable:</strong> {"<<CAMBIAR: NOMBRE O RAZÓN SOCIAL DEL TITULAR>>"}</li>
             <li><strong>NIF/CIF:</strong> {"<<CAMBIAR: NIF O CIF>>"}</li>
-            <li><strong>Domicilio:</strong> C. Miguel Rúa, 64, 04007 Almería, España</li>
+            <li><strong>Domicilio:</strong> C. Miguel Rúa, 64, 04009 Almería, España</li>
             <li><strong>Correo electrónico:</strong> {"<<CAMBIAR: EMAIL DE CONTACTO>>"}</li>
           </ul>
         </Section>

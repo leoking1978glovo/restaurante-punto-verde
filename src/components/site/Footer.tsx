@@ -32,7 +32,7 @@ export function Footer() {
             <p className="mt-4 leading-relaxed text-cream/70">
             C. Miguel Rúa, 64
               <br />
-              04007 Almeria
+              04009 Almeria
               <br />
               España
             </p>
