@@ -1,10 +1,12 @@
-import { createFileRoute } from "@tanstack/react-start";
+import { createFileRoute } from "@tanstack/react-router";
 import { Redis } from "@upstash/redis";
 
-function json(data: unknown, status = 200) {
+const redis = Redis.fromEnv();
+
+function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: { "content-type": "application/json" },
   });
 }
 
@@ -20,7 +22,6 @@ export const Route = createFileRoute("/api/orders-status")({
           return json({ ok: false, error: "unauthorized" }, 401);
         }
         try {
-          const redis = Redis.fromEnv();
           const value = await redis.get("orders:open");
           const open = !(value === false || value === "false");
           return json({ ok: true, open });
