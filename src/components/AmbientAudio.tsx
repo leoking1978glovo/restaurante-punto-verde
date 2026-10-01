@@ -15,14 +15,13 @@ export function AmbientAudio() {
     audio.volume = VOLUME;
     audioRef.current = audio;
 
-    // Arranque en el primer gesto del visitante (click, tecla o scroll).
-    // Los navegadores prohiben el autoplay con sonido puro; esto es lo maximo permitido.
+    // Arranque en el primer gesto del visitante. Los navegadores prohiben
+    // el autoplay con sonido puro; esto es lo maximo permitido y cubre
+    // click, toque, tecla y scroll.
     const tryAutoStart = (e: Event) => {
       const target = e.target as HTMLElement | null;
       if (target?.closest?.("[data-audio-btn]")) return; // no pisar el boton
-      document.removeEventListener("pointerdown", tryAutoStart);
-      document.removeEventListener("keydown", tryAutoStart);
-      document.removeEventListener("scroll", tryAutoStart, true);
+      removeGestures();
       if (!mutedRef.current) return; // el usuario ya decidio
       mutedRef.current = false;
       setMuted(false);
@@ -31,7 +30,18 @@ export function AmbientAudio() {
         setMuted(true);
       });
     };
+
+    const removeGestures = () => {
+      document.removeEventListener("pointerdown", tryAutoStart);
+      document.removeEventListener("touchstart", tryAutoStart);
+      document.removeEventListener("click", tryAutoStart);
+      document.removeEventListener("keydown", tryAutoStart);
+      document.removeEventListener("scroll", tryAutoStart, true);
+    };
+
     document.addEventListener("pointerdown", tryAutoStart);
+    document.addEventListener("touchstart", tryAutoStart);
+    document.addEventListener("click", tryAutoStart);
     document.addEventListener("keydown", tryAutoStart);
     document.addEventListener("scroll", tryAutoStart, true);
 
@@ -45,9 +55,7 @@ export function AmbientAudio() {
     document.addEventListener("visibilitychange", onVisibility);
 
     return () => {
-      document.removeEventListener("pointerdown", tryAutoStart);
-      document.removeEventListener("keydown", tryAutoStart);
-      document.removeEventListener("scroll", tryAutoStart, true);
+      removeGestures();
       document.removeEventListener("visibilitychange", onVisibility);
       audio.pause();
       audioRef.current = null;
@@ -79,7 +87,11 @@ export function AmbientAudio() {
       title={muted ? "Activar música" : "Silenciar música"}
       className="fixed top-20 right-4 z-40 flex h-11 w-11 items-center justify-center rounded-full border border-ink/10 bg-white/90 text-ink shadow-lg backdrop-blur transition-colors hover:bg-white"
     >
-      {muted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+      {muted ? (
+        <VolumeX className="h-5 w-5 animate-pulse" />
+      ) : (
+        <Volume2 className="h-5 w-5" />
+      )}
     </button>
   );
 }
