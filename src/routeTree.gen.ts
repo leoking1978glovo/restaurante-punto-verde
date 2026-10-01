@@ -15,6 +15,7 @@ import { Route as AvisoLegalRouteImport } from './routes/aviso-legal'
 import { Route as CookiesRouteImport } from './routes/cookies'
 import { Route as PrivacidadRouteImport } from './routes/privacidad'
 import { Route as ReservasAdminRouteImport } from './routes/reservas-admin'
+import { Route as ApiOrdersStatusRouteImport } from './routes/api/orders-status'
 import { Route as ApiTablesRouteImport } from './routes/api/tables'
 
 const IndexRoute = IndexRouteImport.update({
@@ -47,6 +48,11 @@ const ReservasAdminRoute = ReservasAdminRouteImport.update({
   path: '/reservas-admin',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiOrdersStatusRoute = ApiOrdersStatusRouteImport.update({
+  id: '/api/orders-status',
+  path: '/api/orders-status',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiTablesRoute = ApiTablesRouteImport.update({
   id: '/api/tables',
   path: '/api/tables',
@@ -60,6 +66,7 @@ export interface FileRoutesByFullPath {
   '/cookies': typeof CookiesRoute
   '/privacidad': typeof PrivacidadRoute
   '/reservas-admin': typeof ReservasAdminRoute
+  '/api/orders-status': typeof ApiOrdersStatusRoute
   '/api/tables': typeof ApiTablesRoute
 }
 export interface FileRoutesByTo {
@@ -69,6 +76,7 @@ export interface FileRoutesByTo {
   '/cookies': typeof CookiesRoute
   '/privacidad': typeof PrivacidadRoute
   '/reservas-admin': typeof ReservasAdminRoute
+  '/api/orders-status': typeof ApiOrdersStatusRoute
   '/api/tables': typeof ApiTablesRoute
 }
 export interface FileRoutesById {
@@ -79,6 +87,7 @@ export interface FileRoutesById {
   '/cookies': typeof CookiesRoute
   '/privacidad': typeof PrivacidadRoute
   '/reservas-admin': typeof ReservasAdminRoute
+  '/api/orders-status': typeof ApiOrdersStatusRoute
   '/api/tables': typeof ApiTablesRoute
 }
 export interface FileRouteTypes {
@@ -90,6 +99,7 @@ export interface FileRouteTypes {
     | '/cookies'
     | '/privacidad'
     | '/reservas-admin'
+    | '/api/orders-status'
     | '/api/tables'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -99,6 +109,7 @@ export interface FileRouteTypes {
     | '/cookies'
     | '/privacidad'
     | '/reservas-admin'
+    | '/api/orders-status'
     | '/api/tables'
   id:
     | '__root__'
@@ -108,6 +119,7 @@ export interface FileRouteTypes {
     | '/cookies'
     | '/privacidad'
     | '/reservas-admin'
+    | '/api/orders-status'
     | '/api/tables'
   fileRoutesById: FileRoutesById
 }
@@ -118,6 +130,7 @@ export interface RootRouteChildren {
   CookiesRoute: typeof CookiesRoute
   PrivacidadRoute: typeof PrivacidadRoute
   ReservasAdminRoute: typeof ReservasAdminRoute
+  ApiOrdersStatusRoute: typeof ApiOrdersStatusRoute
   ApiTablesRoute: typeof ApiTablesRoute
 }
 
@@ -165,6 +178,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReservasAdminRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/orders-status': {
+      id: '/api/orders-status'
+      path: '/api/orders-status'
+      fullPath: '/api/orders-status'
+      preLoaderRoute: typeof ApiOrdersStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/tables': {
       id: '/api/tables'
       path: '/api/tables'
@@ -182,6 +202,7 @@ const rootRouteChildren: RootRouteChildren = {
   CookiesRoute: CookiesRoute,
   PrivacidadRoute: PrivacidadRoute,
   ReservasAdminRoute: ReservasAdminRoute,
+  ApiOrdersStatusRoute: ApiOrdersStatusRoute,
   ApiTablesRoute: ApiTablesRoute,
 }
 export const routeTree = rootRouteImport
