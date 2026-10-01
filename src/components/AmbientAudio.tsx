@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Volume2, VolumeX } from "lucide-react";
 
-// Volumen matizado: 0.1 = 10% (muy suave). Si aun te parece alto, baja a 0.06.
-const VOLUME = 0.06;
+// Volumen matizado: 0.1 = 10%. Ajusta entre 0.06 y 0.15 a gusto.
+const VOLUME = 0.1;
 
 export function AmbientAudio() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -15,6 +15,26 @@ export function AmbientAudio() {
     audio.volume = VOLUME;
     audioRef.current = audio;
 
+    // Arranque en el primer gesto del visitante (click, tecla o scroll).
+    // Los navegadores prohiben el autoplay con sonido puro; esto es lo maximo permitido.
+    const tryAutoStart = (e: Event) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest?.("[data-audio-btn]")) return; // no pisar el boton
+      document.removeEventListener("pointerdown", tryAutoStart);
+      document.removeEventListener("keydown", tryAutoStart);
+      document.removeEventListener("scroll", tryAutoStart, true);
+      if (!mutedRef.current) return; // el usuario ya decidio
+      mutedRef.current = false;
+      setMuted(false);
+      void audio.play().catch(() => {
+        mutedRef.current = true;
+        setMuted(true);
+      });
+    };
+    document.addEventListener("pointerdown", tryAutoStart);
+    document.addEventListener("keydown", tryAutoStart);
+    document.addEventListener("scroll", tryAutoStart, true);
+
     const onVisibility = () => {
       if (document.hidden) {
         audio.pause();
@@ -23,7 +43,11 @@ export function AmbientAudio() {
       }
     };
     document.addEventListener("visibilitychange", onVisibility);
+
     return () => {
+      document.removeEventListener("pointerdown", tryAutoStart);
+      document.removeEventListener("keydown", tryAutoStart);
+      document.removeEventListener("scroll", tryAutoStart, true);
       document.removeEventListener("visibilitychange", onVisibility);
       audio.pause();
       audioRef.current = null;
@@ -49,6 +73,7 @@ export function AmbientAudio() {
   return (
     <button
       type="button"
+      data-audio-btn
       onClick={toggle}
       aria-label={muted ? "Activar música" : "Silenciar música"}
       title={muted ? "Activar música" : "Silenciar música"}
