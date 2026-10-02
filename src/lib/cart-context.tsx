@@ -37,7 +37,7 @@ import {
   function parsePrice(priceStr: string): number {
     const clean = priceStr.replace(/[€\s]/g, "").replace(",", ".");
     const firstValue = clean.split("-")[0];
-    return parseFloat(firstValue) || 0;
+     return parseFloat(firstValue ?? "") || 0;
   }
   
   export function CartProvider({ children }: { children: ReactNode }) {

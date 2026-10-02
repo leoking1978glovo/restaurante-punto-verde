@@ -132,6 +132,7 @@ const ChatWidgetPanel: React.FC<ChatWidgetPanelProps> = ({
       }, 800);
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [pendingMessage, isLoading, error, sendMessageToAgent, onPendingMessageSent]);
 
   useEffect(() => {
