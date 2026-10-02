@@ -1,0 +1,4 @@
+- [ ] Terminar y comprobar carrusel de platos (arrastre, ajuste, controles, imagen y etiquetas).
+- [ ] Actualizar Start/Router/plugin a versiones compatibles y comprobar start-server-core.
+- [ ] Verificar vistas principales y funciones existentes sin tocar claves ni diseño.
+- [ ] Comunicar versiones finales y comprobaciones antes de publicar.
