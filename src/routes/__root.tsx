@@ -7,6 +7,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
@@ -142,17 +143,20 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const cleanPage =
+    pathname.startsWith("/reservas") || pathname.startsWith("/admin");
 
   return (
     <CartProvider>
       <QueryClientProvider client={queryClient}>
         <Outlet />
         <Toaster position="top-center" />
-        <FloatingAvatar />
+        {!cleanPage && <FloatingAvatar />}
+        {!cleanPage && <AmbientAudio />}
         <CartDrawer />
         <ScrollToTop />
         <CookieBanner />
-        <AmbientAudio />
       </QueryClientProvider>
     </CartProvider>
   );
