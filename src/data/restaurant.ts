@@ -18,6 +18,7 @@ export const dishes: Dish[] = [
     description: "Carne tierna cocinada lentamente en una sabrosa salsa criolla.",
     price: "14,50 €",
     image: carneCriolla,
+    tag: "Favorito del chef",
   },
   
   {
@@ -25,6 +26,7 @@ export const dishes: Dish[] = [
     description: "trozos de gallina criolla, plátano verde, yuca, mazorca (choclo) y papa, cocinados en un caldo aromático con ajo, cebolla y cilantro.",
     price: "12,00 €",
     image: sancochodegallina,
+    tag: "Popular",
   },
   {
     name: "maduro con queso",

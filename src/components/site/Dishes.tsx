@@ -2,6 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, useMotionValue, animate } from "motion/react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { dishes } from "@/data/restaurant";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import type { Dish } from "@/data/restaurant";
 
 const GAP = 24; // gap-6
 
@@ -10,6 +13,7 @@ export function Dishes() {
   const trackRef = useRef<HTMLDivElement>(null);
   const x = useMotionValue(0);
   const [maxDrag, setMaxDrag] = useState(0);
+  const [selectedDish, setSelectedDish] = useState<Dish | null>(null);
 
   const measure = useCallback(() => {
     const viewport = viewportRef.current;
@@ -70,20 +74,24 @@ export function Dishes() {
           <div className="flex items-center gap-6">
             <p className="text-sm tracking-widest text-cream/50 uppercase">Arrastra →</p>
             <div className="hidden gap-3 md:flex">
-              <button
+              <Button
+                type="button"
+                variant="outline"
                 onClick={() => go(-1)}
                 aria-label="Anterior"
-                className="flex h-12 w-12 items-center justify-center rounded-full border border-cream/20 text-cream transition-colors hover:border-primary hover:bg-primary hover:text-ink"
+                className="h-12 w-12 rounded-full border-cream/20 bg-transparent p-0 text-cream hover:border-primary hover:bg-primary hover:text-ink"
               >
                 <ArrowLeft className="h-5 w-5" />
-              </button>
-              <button
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
                 onClick={() => go(1)}
                 aria-label="Siguiente"
-                className="flex h-12 w-12 items-center justify-center rounded-full border border-cream/20 text-cream transition-colors hover:border-primary hover:bg-primary hover:text-ink"
+                className="h-12 w-12 rounded-full border-cream/20 bg-transparent p-0 text-cream hover:border-primary hover:bg-primary hover:text-ink"
               >
                 <ArrowRight className="h-5 w-5" />
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -97,7 +105,7 @@ export function Dishes() {
           dragConstraints={{ left: -maxDrag, right: 0 }}
           dragElastic={0.08}
           onDragEnd={onDragEnd}
-          className="flex cursor-grab gap-6 active:cursor-grabbing"
+          className="flex cursor-grab touch-pan-y gap-6 active:cursor-grabbing"
         >
           {dishes.map((dish, i) => (
             <motion.article
@@ -123,10 +131,15 @@ export function Dishes() {
                     {dish.tag}
                   </span>
                 )}
-                <div className="absolute inset-x-0 bottom-0 flex translate-y-full justify-center pb-5 transition-transform duration-300 ease-out group-hover:translate-y-0">
-                  <span className="rounded-full bg-primary px-8 py-3 font-display text-sm tracking-tight text-ink uppercase shadow-lg">
+                <div className="absolute inset-x-0 bottom-0 flex translate-y-full justify-center pb-5 transition-transform duration-300 ease-out group-hover:translate-y-0 group-focus-within:translate-y-0">
+                  <Button
+                    type="button"
+                    onClick={() => setSelectedDish(dish)}
+                    onPointerDownCapture={(event) => event.stopPropagation()}
+                    className="rounded-full px-8 py-3 font-display text-sm text-primary-foreground uppercase shadow-lg"
+                  >
                     Ver detalles
-                  </span>
+                  </Button>
                 </div>
               </div>
               <div className="flex items-start justify-between gap-4 p-6">
@@ -140,6 +153,20 @@ export function Dishes() {
           ))}
         </motion.div>
       </div>
+      <Dialog open={selectedDish !== null} onOpenChange={(open) => { if (!open) setSelectedDish(null); }}>
+        <DialogContent className="overflow-hidden border-border bg-background p-0 text-foreground">
+          {selectedDish && (
+            <>
+              <img src={selectedDish.image} alt={selectedDish.name} className="aspect-[4/3] w-full object-cover" />
+              <div className="p-6">
+                <DialogTitle className="font-display text-3xl">{selectedDish.name}</DialogTitle>
+                <DialogDescription className="mt-3 text-base leading-relaxed">{selectedDish.description}</DialogDescription>
+                <p className="mt-5 font-display text-2xl text-primary">{selectedDish.price}</p>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
