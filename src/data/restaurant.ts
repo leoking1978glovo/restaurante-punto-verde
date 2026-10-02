@@ -18,6 +18,7 @@ export const dishes: Dish[] = [
     description: "Carne tierna cocinada lentamente en una sabrosa salsa criolla.",
     price: "14,50 €",
     image: carneCriolla,
+    tag: "Favorito del chef",
   },
   
   {
@@ -25,6 +26,7 @@ export const dishes: Dish[] = [
     description: "trozos de gallina criolla, plátano verde, yuca, mazorca (choclo) y papa, cocinados en un caldo aromático con ajo, cebolla y cilantro.",
     price: "12,00 €",
     image: sancochodegallina,
+    tag: "Popular",
   },
   {
     name: "maduro con queso",
@@ -39,26 +41,16 @@ export const dishes: Dish[] = [
     image: tamalcolombiano,
   },
   {
-    name: "Bandeja Paisa",
+    name: "Bndeja Paisa",
     description: "PLato colombiano que lleva, arroz blanco, carne moida, chicharron, chorizo, huevo frito, platano maduro, aguacate, arepa.",
     price: "7,90 €",
     image: bandejapaisa,
   },
 ];
 
-export type MenuItemChoice = {
-  label: string;
-  options: string[];
-};
-
 export type MenuCategory = {
   title: string;
-  items: {
-    name: string;
-    description: string;
-    price: string;
-    choices?: MenuItemChoice[];
-  }[];
+  items: { name: string; description: string; price: string }[];
 };
 
 export const menu: MenuCategory[] = [
@@ -88,27 +80,7 @@ export const menu: MenuCategory[] = [
   {
     title: "Menú del día",
     items: [
-      {
-        name: "Arroz, frijoles, ensalada, papa a la francesa, sopa, proteína y bebida",
-        description: "A elección y disponibilidad. Proteína: chicharrón, churrasco, costillas BBQ, pollo broster, cerdo o pollo a la plancha. Bebidas: coca cola, fanta, aquarius, agua de panela o agua.",
-        price: "12.00\u00A0€",
-        choices: [
-          {
-            label: "Elige tu proteína",
-            options: [
-              "Chicharrón",
-              "Churrasco",
-              "Costillas BBQ",
-              "Pollo broster",
-              "Pollo a la plancha",
-            ],
-          },
-          {
-            label: "Elige tu bebida",
-            options: ["Coca Cola", "Fanta", "Aquarius", "Agua de panela", "Agua"],
-          },
-        ],
-      },
+      { name: "Arroz, frijoles, ensalada, papa a la francesa, sopa, proteína y bebida", description: "A elección y disponibilidad. Proteína: chicharrón, churrasco, costillas BBQ, pollo broster, cerdo o pollo a la plancha. Bebidas: coca cola, fanta, aquarius.", price: "12.00\u00A0€" },
       { name: "Menú infantil", description: "Pollo broster o nuggets (a elección y/o disponibilidad), papa francesa y helado.", price: "8.00\u00A0€" },
     ],
   },
@@ -118,7 +90,7 @@ export const menu: MenuCategory[] = [
       { name: "Bandeja paisa", description: "", price: "14.50\u00A0€" },
       { name: "Sobre barriga en salsa", description: "", price: "13.50\u00A0€" },
       { name: "Lengua en salsa", description: "", price: "13.50\u00A0€" },
-      { name: "Pescado frito", description: "De acuerdo al tamaño desde 14.00€ a 18.00€", price: "18.00\u00A0€" },
+      { name: "Pescado frito", description: "De acuerdo a tamaño.", price: "14.00 - 18.00\u00A0€" },
       { name: "Chuleta valluna", description: "", price: "13.50\u00A0€" },
       { name: "Ternera a la plancha o en bistec", description: "", price: "13.50\u00A0€" },
       { name: "Mondongo", description: "Viernes y sábados. Sopa de callo, trocios de corto y costilla, patata, yuca, zanahoria cocida.", price: "14.00\u00A0€" },

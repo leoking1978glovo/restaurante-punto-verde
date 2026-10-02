@@ -1,5 +1,4 @@
 import type { FormEvent } from "react";
-import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 
 const hours = [
@@ -30,15 +29,15 @@ export function Footer() {
             </h3>
 
             <p className="mt-4 leading-relaxed text-cream/70">
-            C. Miguel Rúa, 64
+              Calle Miguel Rua, 64
               <br />
-              04009 Almeria
+              04007 Almeria
               <br />
               España
             </p>
 
             <p className="mt-4 text-cream/70">+34 950 67 45 42</p>
-            <p className="text-cream/70">restaurantpuntoverde.es</p>
+            <p className="text-cream/70">hola@punto-verde.es</p>
           </div>
 
           <div>
@@ -59,22 +58,9 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-14 flex flex-col gap-4 border-t border-cream/15 pt-6 md:flex-row md:items-center md:justify-between md:pr-32">
-          <p className="text-xs tracking-widest text-cream/35 uppercase">
-            © {new Date().getFullYear()} Punto Verde
-          </p>
-          <nav className="flex flex-wrap gap-x-6 gap-y-2 text-xs tracking-widest uppercase">
-            <Link to="/aviso-legal" className="text-cream/50 hover:text-cream transition-colors">
-              Aviso Legal
-            </Link>
-            <Link to="/privacidad" className="text-cream/50 hover:text-cream transition-colors">
-              Privacidad
-            </Link>
-            <Link to="/cookies" className="text-cream/50 hover:text-cream transition-colors">
-              Cookies
-            </Link>
-          </nav>
-        </div>
+        <p className="mt-14 text-xs tracking-widest text-cream/35 uppercase">
+          © {new Date().getFullYear()} Punto Verde
+        </p>
       </div>
     </footer>
   );

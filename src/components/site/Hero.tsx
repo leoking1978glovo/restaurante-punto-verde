@@ -3,7 +3,7 @@ import heroBg from "@/assets/hero-bg.jpg";
 import logoPuntoVerde from "@/assets/punto-verde-logo.png";
 import banderaColombia from "@/assets/bandera-de-colombia.png";
 
-const words = ["Restaurante", "colombiano", "en Almería"];
+const words = ["Tradicion", "y","Sabor"];
 
 export function Hero() {
   return (
@@ -22,22 +22,22 @@ export function Hero() {
       <div className="absolute -top-40 left-1/2 h-[60vh] w-[60vw] -translate-x-1/2 rounded-full bg-primary/25 blur-[140px]" />
 
       <div className="relative mx-auto w-full max-w-[1600px] px-6 pb-20 md:px-12 md:pb-28">
-        {/* LOGOS */}
+        {/* LOGOS: Punto Verde + Bandera Colombia */}
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.1, duration: 0.7, ease: [0.2, 0.8, 0.2, 1] }}
-          className="mb-8 flex items-center gap-4 md:pl-56"
+          className="mb-8 flex items-center gap-4"
         >
           <img
             src={logoPuntoVerde}
             alt="Punto Verde - Gastronomía Colombiana"
-            className="h-20 w-auto md:h-24 drop-shadow-[0_4px_20px_rgba(0,0,0,0.5)]"
+            className="h-20 w-auto md:h-28 drop-shadow-[0_4px_20px_rgba(0,0,0,0.5)]"
           />
           <img
             src={banderaColombia}
             alt="Bandera de Colombia"
-            className="h-10 w-auto md:h-12 drop-shadow-[0_4px_20px_rgba(0,0,0,0.5)]"
+            className="h-12 w-auto md:h-16 drop-shadow-[0_4px_20px_rgba(0,0,0,0.5)]"
           />
         </motion.div>
 
@@ -47,7 +47,7 @@ export function Hero() {
           transition={{ delay: 0.25, duration: 0.6 }}
           className="mb-6 text-xs font-semibold tracking-[0.4em] text-secondary uppercase"
         >
-          Cocina con el alma · Desde 2024
+          Cocina con alma ·  · Desde 2024
         </motion.p>
 
         <h1 className="max-w-[15ch] text-[clamp(3.5rem,13vw,9.5rem)] text-cream">
@@ -72,10 +72,9 @@ export function Hero() {
             className="max-w-md text-base leading-relaxed text-cream/70"
           >
             Ingredientes frescos, recetas tradicionales de Colombia y un espacio donde cada plato cuenta una historia.
-            Un sitio Agradable y adictivo en pleno centro de Almería.
+            Un sitio honesto y adictivo en pleno casco urbano de Almeria.
           </motion.p>
 
-          {/* BOTÓN RESERVAR MESA: visible en TODOS (móvil + desktop) */}
           <div className="flex flex-col items-center gap-4">
             <motion.a
               href="#reservas"

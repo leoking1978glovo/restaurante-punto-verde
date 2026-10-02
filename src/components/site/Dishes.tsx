@@ -1,153 +1,172 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { motion, useMotionValue, animate } from "motion/react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { dishes } from "@/data/restaurant";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import type { Dish } from "@/data/restaurant";
 
-const AUTOPLAY_INTERVAL = 4000;
+const GAP = 24; // gap-6
 
 export function Dishes() {
-  const [index, setIndex] = useState(0);
-  const [direction, setDirection] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const x = useMotionValue(0);
+  const [maxDrag, setMaxDrag] = useState(0);
+  const [selectedDish, setSelectedDish] = useState<Dish | null>(null);
 
-  const current = dishes[index];
-
-  const goTo = useCallback(
-    (newIndex: number) => {
-      const total = dishes.length;
-      let target = newIndex;
-      if (target < 0) target = total - 1;
-      if (target >= total) target = 0;
-
-      setDirection(target > index ? 1 : -1);
-      setIndex(target);
-    },
-    [index],
-  );
-
-  const next = useCallback(() => goTo(index + 1), [goTo, index]);
-  const prev = useCallback(() => goTo(index - 1), [goTo, index]);
+  const measure = useCallback(() => {
+    const viewport = viewportRef.current;
+    const track = trackRef.current;
+    if (!viewport || !track) return;
+    setMaxDrag(Math.max(0, track.scrollWidth - viewport.clientWidth));
+  }, []);
 
   useEffect(() => {
-    if (isPaused) return;
-    timerRef.current = setTimeout(() => {
-      next();
-    }, AUTOPLAY_INTERVAL);
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, [index, isPaused, next]);
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [measure]);
 
-  const variants = {
-    enter: (dir: number) => ({
-      opacity: 0,
-      scale: 0.95,
-      x: dir > 0 ? 60 : -60,
-    }),
-    center: {
-      opacity: 1,
-      scale: 1,
-      x: 0,
+  const itemWidth = () => {
+    const track = trackRef.current;
+    if (!track || track.children.length === 0) return 400;
+    return (track.children[0] as HTMLElement).offsetWidth + GAP;
+  };
+
+  const snapTo = useCallback(
+    (target: number) => {
+      const clamped = Math.max(-maxDrag, Math.min(0, target));
+      const step = itemWidth();
+      const snapped = Math.round(clamped / step) * step;
+      animate(x, Math.max(-maxDrag, Math.min(0, snapped)), {
+        type: "spring",
+        stiffness: 300,
+        damping: 32,
+      });
     },
-    exit: (dir: number) => ({
-      opacity: 0,
-      scale: 0.95,
-      x: dir > 0 ? -60 : 60,
-    }),
+    [maxDrag, x],
+  );
+
+  const onDragEnd = () => {
+    const velocity = x.getVelocity();
+    const projected = x.get() + velocity * 0.2;
+    snapTo(projected);
+  };
+
+  const go = (dir: 1 | -1) => {
+    snapTo(x.get() - dir * itemWidth());
   };
 
   return (
-    <section
-      className="bg-ink py-16 md:py-16"
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
-    >
-      {/* HEADER */}
-      <div className="mx-auto max-w-[1600px] px-4 md:px-12">
-        <div className="flex items-center justify-between gap-4">
+    <section className="bg-ink py-24 md:py-40">
+      <div className="mx-auto max-w-[1600px] px-6 md:px-12">
+        <div className="flex flex-wrap items-end justify-between gap-6">
           <motion.h2
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-60px" }}
-            transition={{ duration: 0.6 }}
-            className="text-3xl text-cream md:text-5xl"
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.7 }}
+            className="text-[clamp(2.75rem,8vw,6rem)] text-cream"
           >
             Platos <span className="text-fire">tradicionales</span>
           </motion.h2>
-          <div className="flex items-center gap-3">
-            <span className="text-xs tracking-widest text-cream/40 uppercase">
-              {index + 1}/{dishes.length}
-            </span>
-            <div className="flex gap-2">
-              <button
-                onClick={prev}
+          <div className="flex items-center gap-6">
+            <p className="text-sm tracking-widest text-cream/50 uppercase">Arrastra →</p>
+            <div className="hidden gap-3 md:flex">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => go(-1)}
                 aria-label="Anterior"
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-cream/20 text-cream transition-colors hover:border-primary hover:bg-primary hover:text-ink"
+                className="h-12 w-12 rounded-full border-cream/20 bg-transparent p-0 text-cream hover:border-primary hover:bg-primary hover:text-ink"
               >
-                <ArrowLeft className="h-4 w-4" />
-              </button>
-              <button
-                onClick={next}
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => go(1)}
                 aria-label="Siguiente"
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-cream/20 text-cream transition-colors hover:border-primary hover:bg-primary hover:text-ink"
+                className="h-12 w-12 rounded-full border-cream/20 bg-transparent p-0 text-cream hover:border-primary hover:bg-primary hover:text-ink"
               >
-                <ArrowRight className="h-4 w-4" />
-              </button>
+                <ArrowRight className="h-5 w-5" />
+              </Button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* SLIDESHOW: MÁS ALTO EN MÓVIL */}
-      <div className="relative mx-auto mt-8 max-w-6xl px-4 md:mt-8 md:px-12">
-        <div className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl md:aspect-[16/8]">
-          <AnimatePresence mode="wait" custom={direction}>
-            <motion.div
-              key={current.name}
-              custom={direction}
-              variants={variants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{ duration: 0.6, ease: "easeInOut" }}
-              className="absolute inset-0"
+      <div ref={viewportRef} className="mt-14 overflow-hidden px-6 pb-4 md:px-12">
+        <motion.div
+          ref={trackRef}
+          drag="x"
+          style={{ x }}
+          dragConstraints={{ left: -maxDrag, right: 0 }}
+          dragElastic={0.08}
+          onDragEnd={onDragEnd}
+          className="flex cursor-grab touch-pan-y gap-6 active:cursor-grabbing"
+        >
+          {dishes.map((dish, i) => (
+            <motion.article
+              key={dish.name}
+              initial={{ opacity: 0, y: 60 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-80px" }}
+              transition={{ duration: 0.6, delay: (i % 3) * 0.1 }}
+              className="group relative w-[300px] shrink-0 overflow-hidden rounded-2xl bg-cream/5 md:w-[380px]"
             >
-              <img
-                src={current.image}
-                alt={current.name}
-                draggable={false}
-                className="h-full w-full object-cover"
-              />
-              {/* Degradado mínimo solo para el nombre */}
-              <div className="absolute inset-x-0 bottom-0 h-[20%] bg-gradient-to-t from-black/80 to-transparent" />
-
-              {/* NOMBRE ABAJO */}
-              <div className="absolute inset-x-0 bottom-0 p-4 md:p-6">
-                <h3 className="text-center text-xl font-bold text-cream md:text-3xl">
-                  {current.name}
-                </h3>
+              <div className="relative aspect-[4/3] overflow-hidden">
+                <img
+                  src={dish.image}
+                  alt={dish.name}
+                  loading="lazy"
+                  draggable={false}
+                  width={800}
+                  height={600}
+                  className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                />
+                {dish.tag && (
+                  <span className="absolute top-4 left-4 rounded-full bg-secondary px-4 py-1.5 font-display text-xs tracking-tight text-ink uppercase">
+                    {dish.tag}
+                  </span>
+                )}
+                <div className="absolute inset-x-0 bottom-0 flex translate-y-full justify-center pb-5 transition-transform duration-300 ease-out group-hover:translate-y-0 group-focus-within:translate-y-0">
+                  <Button
+                    type="button"
+                    onClick={() => setSelectedDish(dish)}
+                    onPointerDownCapture={(event) => event.stopPropagation()}
+                    className="rounded-full px-8 py-3 font-display text-sm text-primary-foreground uppercase shadow-lg"
+                  >
+                    Ver detalles
+                  </Button>
+                </div>
               </div>
-            </motion.div>
-          </AnimatePresence>
-        </div>
-
-        {/* PUNTOS */}
-        <div className="mt-6 flex justify-center gap-1.5">
-          {dishes.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => goTo(i)}
-              className={`h-1.5 rounded-full transition-all duration-300 ${
-                i === index
-                  ? "w-6 bg-primary"
-                  : "w-1.5 bg-cream/30 hover:bg-cream/50"
-              }`}
-              aria-label={`Ir al plato ${i + 1}`}
-            />
+              <div className="flex items-start justify-between gap-4 p-6">
+                <div>
+                  <h3 className="text-2xl text-cream">{dish.name}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-cream/60">{dish.description}</p>
+                </div>
+                <span className="shrink-0 font-display text-xl text-primary">{dish.price}</span>
+              </div>
+            </motion.article>
           ))}
-        </div>
+        </motion.div>
       </div>
+      <Dialog open={selectedDish !== null} onOpenChange={(open) => { if (!open) setSelectedDish(null); }}>
+        <DialogContent className="overflow-hidden border-border bg-background p-0 text-foreground">
+          {selectedDish && (
+            <>
+              <img src={selectedDish.image} alt={selectedDish.name} className="aspect-[4/3] w-full object-cover" />
+              <div className="p-6">
+                <DialogTitle className="font-display text-3xl">{selectedDish.name}</DialogTitle>
+                <DialogDescription className="mt-3 text-base leading-relaxed">{selectedDish.description}</DialogDescription>
+                <p className="mt-5 font-display text-2xl text-primary">{selectedDish.price}</p>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

@@ -10,128 +10,33 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AdminRouteImport } from './routes/admin'
-import { Route as AvisoLegalRouteImport } from './routes/aviso-legal'
-import { Route as CookiesRouteImport } from './routes/cookies'
-import { Route as PrivacidadRouteImport } from './routes/privacidad'
-import { Route as ReservasAdminRouteImport } from './routes/reservas-admin'
-import { Route as ApiOrdersStatusRouteImport } from './routes/api/orders-status'
-import { Route as ApiTablesRouteImport } from './routes/api/tables'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminRoute = AdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AvisoLegalRoute = AvisoLegalRouteImport.update({
-  id: '/aviso-legal',
-  path: '/aviso-legal',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CookiesRoute = CookiesRouteImport.update({
-  id: '/cookies',
-  path: '/cookies',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PrivacidadRoute = PrivacidadRouteImport.update({
-  id: '/privacidad',
-  path: '/privacidad',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ReservasAdminRoute = ReservasAdminRouteImport.update({
-  id: '/reservas-admin',
-  path: '/reservas-admin',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiOrdersStatusRoute = ApiOrdersStatusRouteImport.update({
-  id: '/api/orders-status',
-  path: '/api/orders-status',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiTablesRoute = ApiTablesRouteImport.update({
-  id: '/api/tables',
-  path: '/api/tables',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
-  '/aviso-legal': typeof AvisoLegalRoute
-  '/cookies': typeof CookiesRoute
-  '/privacidad': typeof PrivacidadRoute
-  '/reservas-admin': typeof ReservasAdminRoute
-  '/api/orders-status': typeof ApiOrdersStatusRoute
-  '/api/tables': typeof ApiTablesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
-  '/aviso-legal': typeof AvisoLegalRoute
-  '/cookies': typeof CookiesRoute
-  '/privacidad': typeof PrivacidadRoute
-  '/reservas-admin': typeof ReservasAdminRoute
-  '/api/orders-status': typeof ApiOrdersStatusRoute
-  '/api/tables': typeof ApiTablesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
-  '/aviso-legal': typeof AvisoLegalRoute
-  '/cookies': typeof CookiesRoute
-  '/privacidad': typeof PrivacidadRoute
-  '/reservas-admin': typeof ReservasAdminRoute
-  '/api/orders-status': typeof ApiOrdersStatusRoute
-  '/api/tables': typeof ApiTablesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/admin'
-    | '/aviso-legal'
-    | '/cookies'
-    | '/privacidad'
-    | '/reservas-admin'
-    | '/api/orders-status'
-    | '/api/tables'
+  fullPaths: '/'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/admin'
-    | '/aviso-legal'
-    | '/cookies'
-    | '/privacidad'
-    | '/reservas-admin'
-    | '/api/orders-status'
-    | '/api/tables'
-  id:
-    | '__root__'
-    | '/'
-    | '/admin'
-    | '/aviso-legal'
-    | '/cookies'
-    | '/privacidad'
-    | '/reservas-admin'
-    | '/api/orders-status'
-    | '/api/tables'
+  to: '/'
+  id: '__root__' | '/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AdminRoute: typeof AdminRoute
-  AvisoLegalRoute: typeof AvisoLegalRoute
-  CookiesRoute: typeof CookiesRoute
-  PrivacidadRoute: typeof PrivacidadRoute
-  ReservasAdminRoute: typeof ReservasAdminRoute
-  ApiOrdersStatusRoute: typeof ApiOrdersStatusRoute
-  ApiTablesRoute: typeof ApiTablesRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -143,67 +48,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin': {
-      id: '/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AdminRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/aviso-legal': {
-      id: '/aviso-legal'
-      path: '/aviso-legal'
-      fullPath: '/aviso-legal'
-      preLoaderRoute: typeof AvisoLegalRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/cookies': {
-      id: '/cookies'
-      path: '/cookies'
-      fullPath: '/cookies'
-      preLoaderRoute: typeof CookiesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/privacidad': {
-      id: '/privacidad'
-      path: '/privacidad'
-      fullPath: '/privacidad'
-      preLoaderRoute: typeof PrivacidadRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reservas-admin': {
-      id: '/reservas-admin'
-      path: '/reservas-admin'
-      fullPath: '/reservas-admin'
-      preLoaderRoute: typeof ReservasAdminRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/orders-status': {
-      id: '/api/orders-status'
-      path: '/api/orders-status'
-      fullPath: '/api/orders-status'
-      preLoaderRoute: typeof ApiOrdersStatusRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/tables': {
-      id: '/api/tables'
-      path: '/api/tables'
-      fullPath: '/api/tables'
-      preLoaderRoute: typeof ApiTablesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AdminRoute: AdminRoute,
-  AvisoLegalRoute: AvisoLegalRoute,
-  CookiesRoute: CookiesRoute,
-  PrivacidadRoute: PrivacidadRoute,
-  ReservasAdminRoute: ReservasAdminRoute,
-  ApiOrdersStatusRoute: ApiOrdersStatusRoute,
-  ApiTablesRoute: ApiTablesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

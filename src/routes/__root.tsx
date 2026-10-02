@@ -1,6 +1,5 @@
 import { CartProvider } from "@/lib/cart-context";
 import { CartDrawer } from "@/components/CartDrawer";
-import { ScrollToTop } from "@/components/ScrollToTop";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
@@ -9,12 +8,11 @@ import {
   useRouter,
   HeadContent,
   Scripts,
+  type ErrorComponentProps,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import FloatingAvatar from "@/components/FloatingAvatar";
-import { CookieBanner } from "@/components/CookieBanner";
-import { AmbientAudio } from "@/components/AmbientAudio";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -25,10 +23,10 @@ function NotFoundComponent() {
       <div className="max-w-md text-center">
         <h1 className="text-7xl font-bold text-foreground">404</h1>
         <h2 className="mt-4 text-xl font-semibold text-foreground">
-          Pagina no encontrada
+          Página no encontrada
         </h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          La pagina que buscas no existe o ha sido movida.
+          La página que buscas no existe o ha sido movida.
         </p>
         <div className="mt-6">
           <Link
@@ -43,7 +41,7 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function ErrorComponent({ error, reset }: ErrorComponentProps) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
@@ -54,10 +52,10 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          Esta pagina no cargo
+          Esta página no cargó
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Algo salio mal. Puedes intentar recargar o volver al inicio.
+          Algo salió mal. Puedes intentar recargar o volver al inicio.
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
@@ -86,27 +84,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Restaurante Punto Verde | Comida colombiana en Almería" },
-      { name: "description", content: "Restaurante Punto Verde — Cocina con alma y sabor natural. Autentica cocina colombiana en Almeria. Bandeja paisa, sancocho, arepas y mas delicias tradicionales. Reserva tu mesa ahora." },
-      { name: "keywords", content: "restaurante colombiano, Almeria, bandeja paisa, comida colombiana, restaurante Punto Verde, cocina tradicional" },
+      { title: "Punto Verde" },
+      { name: "description", content: "Punto Verde — Cocina con alma y sabor natural." },
       { name: "author", content: "Punto Verde" },
-      { name: "robots", content: "index, follow" },
-      { name: "theme-color", content: "#5F7A3A" },
-      { name: "apple-mobile-web-app-capable", content: "yes" },
-      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
-      { name: "apple-mobile-web-app-title", content: "Punto Verde" },
-      { property: "og:title", content: "Restaurante Punto Verde | Comida colombiana en Almería" },
-      { property: "og:description", content: "Restaurante Punto Verde — Autentica cocina colombiana en Almeria. Bandeja paisa, sancocho, arepas y mas. Reserva tu mesa." },
+      { property: "og:title", content: "Punto Verde" },
+      { property: "og:description", content: "Punto Verde — Cocina con alma y sabor natural." },
       { property: "og:type", content: "website" },
-      { property: "og:locale", content: "es_ES" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@punto_verde" },
-      { name: "twitter:title", content: "Restaurante Punto Verde | Comida colombiana en Almería" },
-      { name: "twitter:description", content: "Restaurante Punto Verde — Autentica cocina colombiana en Almeria. Reserva tu mesa." },
     ],
     links: [
-      { rel: "manifest", href: "/manifest.json" },
-      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
@@ -117,7 +104,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "icon", href: "/favicon-32x32.png", type: "image/png" },
+      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
     ],
   }),
   shellComponent: RootShell,
@@ -150,9 +137,6 @@ function RootComponent() {
         <Toaster position="top-center" />
         <FloatingAvatar />
         <CartDrawer />
-        <ScrollToTop />
-        <CookieBanner />
-        <AmbientAudio />
       </QueryClientProvider>
     </CartProvider>
   );
