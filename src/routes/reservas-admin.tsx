@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { Redis } from "@upstash/redis";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const redis = Redis.fromEnv();
 
@@ -18,6 +18,7 @@ const adminAction = createServerFn({ method: "POST" })
       name?: string;
       phone?: string;
       notes?: string;
+      open?: boolean;
     }) => d,
   )
   .handler(async ({ data }) => {
@@ -50,6 +51,37 @@ const adminAction = createServerFn({ method: "POST" })
       );
     }
 
+    function todayMadrid(): string {
+      return new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Europe/Madrid",
+      }).format(new Date());
+    }
+
+    function nowMinutesMadrid(): number {
+      const parts = new Intl.DateTimeFormat("en-GB", {
+        timeZone: "Europe/Madrid",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }).formatToParts(new Date());
+      const h = Number(parts.find((p) => p.type === "hour")?.value ?? "0");
+      const m = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
+      return h * 60 + m;
+    }
+
+    // Reserva cumplida: paso su hora + 90 minutos -> se ignora y la mesa queda libre.
+    function isExpired(date: string, start: string): boolean {
+      const today = todayMadrid();
+      if (date < today) return true;
+      if (date > today) return false;
+      return timeToMinutes(start) + 90 <= nowMinutesMadrid();
+    }
+
+    async function getReservationsOpen(): Promise<boolean> {
+      const value = await redis.get<string>("reservations:open");
+      return value !== "0"; // por defecto: abiertas
+    }
+
     function parseBooking(value: unknown) {
       try {
         const b = (typeof value === "string" ? JSON.parse(value) : value) as {
@@ -70,22 +102,46 @@ const adminAction = createServerFn({ method: "POST" })
       );
       const tables = tableIds().map((id) => {
         const booking = raw ? parseBooking(raw[id]) : null;
-        return { id, free: !booking, booking };
+        const expired =
+          booking && isExpired(date, booking.start) ? true : false;
+        return {
+          id,
+          free: !booking || expired,
+          booking: expired ? null : booking,
+        };
       });
       const reservations = Object.entries(raw ?? {})
         .map(([table, value]) => {
           const booking = parseBooking(value);
-          return booking ? { table, ...booking } : null;
+          return booking && !isExpired(date, booking.start)
+            ? { table, ...booking }
+            : null;
         })
         .filter(Boolean)
         .sort((a: any, b: any) => a.start.localeCompare(b.start));
-      return { tables, reservations };
+      return {
+        tables,
+        reservations,
+        reservationsOpen: await getReservationsOpen(),
+      };
     }
 
     if (data.action === "overview") {
       const date = data.date ?? "";
       if (!DATE_RE.test(date)) return { ok: false, error: "Fecha invalida" };
       return { ok: true, date, ...(await overview(date)) };
+    }
+
+    if (data.action === "setReservations") {
+      const open = data.open === true;
+      await redis.set("reservations:open", open ? "1" : "0");
+      return {
+        ok: true,
+        reservationsOpen: open,
+        ...(data.date && DATE_RE.test(data.date)
+          ? await overview(data.date)
+          : {}),
+      };
     }
 
     if (data.action === "cancel") {
@@ -116,7 +172,8 @@ const adminAction = createServerFn({ method: "POST" })
       const occupied = new Set<string>();
       for (const [t, value] of Object.entries(raw ?? {})) {
         const b = parseBooking(value);
-        if (b && overlaps(time, b.start)) occupied.add(t);
+        if (b && !isExpired(date, b.start) && overlaps(time, b.start))
+          occupied.add(t);
       }
       const free = tableIds().filter((t) => !occupied.has(t));
       if (free.length === 0)
@@ -157,6 +214,7 @@ function AdminReservas() {
   const [date, setDate] = useState(todayMadrid());
   const [tables, setTables] = useState<any[]>([]);
   const [reservations, setReservations] = useState<any[]>([]);
+  const [reservationsOpen, setReservationsOpen] = useState(true);
   const [msg, setMsg] = useState("");
   const [form, setForm] = useState({
     name: "",
@@ -170,18 +228,33 @@ function AdminReservas() {
     const res: any = await adminAction({ data: { password, ...payload } });
     if (res.ok) {
       setAuthed(true);
-      setTables(res.tables ?? []);
-      setReservations(res.reservations ?? []);
+      if (res.tables) setTables(res.tables);
+      if (res.reservations) setReservations(res.reservations);
+      if (typeof res.reservationsOpen === "boolean")
+        setReservationsOpen(res.reservationsOpen);
       setMsg(
         payload.action === "add" && res.table
           ? `Mesa ${res.table} asignada`
-          : "",
+          : payload.action === "setReservations"
+            ? res.reservationsOpen
+              ? "Reservas ABIERTAS"
+              : "Reservas CERRADAS"
+            : "",
       );
     } else {
       setMsg(res.error ?? "Error");
       if (res.error === "Contrasena incorrecta") setAuthed(false);
     }
   }
+
+  // Auto-actualizacion: cada 20 segundos recarga el dia visible.
+  useEffect(() => {
+    if (!authed) return;
+    const id = setInterval(() => {
+      call({ action: "overview", date });
+    }, 20000);
+    return () => clearInterval(id);
+  }, [authed, date, password]);
 
   function goDay(days: number) {
     const next = shiftDate(date, days);
@@ -264,7 +337,41 @@ function AdminReservas() {
       }}
     >
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
-        <h1>Reservas Punto Verde</h1>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 12,
+            flexWrap: "wrap",
+            marginBottom: 8,
+          }}
+        >
+          <h1 style={{ margin: 0 }}>Reservas Punto Verde</h1>
+          <button
+            onClick={() =>
+              call({
+                action: "setReservations",
+                open: !reservationsOpen,
+                date,
+              })
+            }
+            title="Abrir o cerrar las reservas online"
+            style={{
+              padding: "10px 18px",
+              borderRadius: 8,
+              border: "none",
+              fontWeight: "bold",
+              fontSize: 15,
+              cursor: "pointer",
+              background: reservationsOpen ? "#2d5a2d" : "#7a2d2d",
+              color: "#fff",
+            }}
+          >
+            {reservationsOpen ? "Reservas: ABIERTAS" : "Reservas: CERRADAS"}
+          </button>
+        </div>
+
         <div
           style={{
             marginBottom: 16,
@@ -314,7 +421,13 @@ function AdminReservas() {
           >
             ▶
           </button>
-          <span style={{ color: "#ccc", fontSize: 14, textTransform: "capitalize" }}>
+          <span
+            style={{
+              color: "#ccc",
+              fontSize: 14,
+              textTransform: "capitalize",
+            }}
+          >
             {fechaLarga}
           </span>
           <button
@@ -440,7 +553,13 @@ function AdminReservas() {
             placeholder="Notas (cumpleanos, alergias...)"
             value={form.notes}
             onChange={(e) => setForm({ ...form, notes: e.target.value })}
-            style={{ padding: 8, borderRadius: 6, border: "none", flex: 1, minWidth: 180 }}
+            style={{
+              padding: 8,
+              borderRadius: 6,
+              border: "none",
+              flex: 1,
+              minWidth: 180,
+            }}
           />
           <button
             onClick={() => call({ action: "add", date, ...form })}

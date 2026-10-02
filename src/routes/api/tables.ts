@@ -27,6 +27,37 @@ function overlaps(a: string, b: string): boolean {
   return startA < startB + dur && startA + dur > startB;
 }
 
+function todayMadrid(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Madrid",
+  }).format(new Date());
+}
+
+function nowMinutesMadrid(): number {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Madrid",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date());
+  const h = Number(parts.find((p) => p.type === "hour")?.value ?? "0");
+  const m = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
+  return h * 60 + m;
+}
+
+// Una reserva esta "cumplida" (y la mesa liberada) cuando paso su hora + duracion.
+function isExpired(date: string, start: string): boolean {
+  const today = todayMadrid();
+  if (date < today) return true;
+  if (date > today) return false;
+  return timeToMinutes(start) + DURATION_HOURS * 60 <= nowMinutesMadrid();
+}
+
+async function getReservationsOpen(): Promise<boolean> {
+  const value = await redis.get<string>("reservations:open");
+  return value !== "0"; // por defecto: abiertas
+}
+
 function isAuthorized(request: Request): boolean {
   const expected = process.env.TABLES_API_KEY;
   if (!expected) return false;
@@ -69,7 +100,13 @@ async function getOccupied(
   if (!raw) return occupied;
   for (const [table, value] of Object.entries(raw)) {
     const booking = parseBooking(value);
-    if (booking && overlaps(time, booking.start)) occupied.set(table, booking);
+    if (
+      booking &&
+      !isExpired(date, booking.start) &&
+      overlaps(time, booking.start)
+    ) {
+      occupied.set(table, booking);
+    }
   }
   return occupied;
 }
@@ -93,12 +130,24 @@ export const Route = createFileRoute("/api/tables")({
             if (!raw) continue;
             for (const [table, value] of Object.entries(raw)) {
               const booking = parseBooking(value);
-              if (booking && booking.phone === phone) {
+              if (
+                booking &&
+                booking.phone === phone &&
+                !isExpired(date, booking.start)
+              ) {
                 reservations.push({ date, table, ...booking });
               }
             }
           }
           return json({ ok: true, phone, reservations });
+        }
+
+        // Consulta de estado del interruptor de reservas (para el agente)
+        if (url.searchParams.get("status") === "1") {
+          return json({
+            ok: true,
+            reservationsOpen: await getReservationsOpen(),
+          });
         }
 
         const date = url.searchParams.get("date") ?? "";
@@ -124,6 +173,7 @@ export const Route = createFileRoute("/api/tables")({
           time,
           durationHours: DURATION_HOURS,
           totalTables: TOTAL_TABLES,
+          reservationsOpen: await getReservationsOpen(),
           freeTables,
           occupiedCount: occupied.size,
           occupied: [...occupied.entries()].map(([table, b]) => ({
@@ -177,6 +227,18 @@ export const Route = createFileRoute("/api/tables")({
           if (!table) return json({ ok: false, error: "Falta table" }, 400);
           await redis.hdel(key, table);
           return json({ ok: true, released: table });
+        }
+
+        // Interruptor de reservas: si esta cerrado, se rechaza la reserva.
+        if (!(await getReservationsOpen())) {
+          return json(
+            {
+              ok: false,
+              reason: "closed",
+              message: "Las reservas online estan cerradas ahora mismo.",
+            },
+            403,
+          );
         }
 
         const occupied = await getOccupied(date, time);
