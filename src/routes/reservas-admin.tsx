@@ -146,6 +146,11 @@ function todayMadrid(): string {
   }).format(new Date());
 }
 
+function shiftDate(iso: string, days: number): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+}
+
 function AdminReservas() {
   const [password, setPassword] = useState("");
   const [authed, setAuthed] = useState(false);
@@ -177,6 +182,20 @@ function AdminReservas() {
       if (res.error === "Contrasena incorrecta") setAuthed(false);
     }
   }
+
+  function goDay(days: number) {
+    const next = shiftDate(date, days);
+    setDate(next);
+    call({ action: "overview", date: next });
+  }
+
+  const isToday = date <= todayMadrid();
+  const fechaLarga = new Intl.DateTimeFormat("es-ES", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: "Europe/Madrid",
+  }).format(new Date(`${date}T12:00:00`));
 
   if (!authed) {
     return (
@@ -255,12 +274,49 @@ function AdminReservas() {
             flexWrap: "wrap",
           }}
         >
-          <label>Fecha: </label>
+          <button
+            onClick={() => goDay(-1)}
+            disabled={isToday}
+            title="Dia anterior"
+            style={{
+              padding: "6px 14px",
+              background: isToday ? "#3a3a3a" : "#2a2a2a",
+              color: isToday ? "#888" : "#fff",
+              border: "1px solid #555",
+              borderRadius: 6,
+              cursor: isToday ? "default" : "pointer",
+              fontSize: 16,
+            }}
+          >
+            ◀
+          </button>
           <input
             type="date"
             value={date}
-            onChange={(e) => setDate(e.target.value)}
+            onChange={(e) => {
+              const next = e.target.value;
+              setDate(next);
+              call({ action: "overview", date: next });
+            }}
           />
+          <button
+            onClick={() => goDay(1)}
+            title="Dia siguiente"
+            style={{
+              padding: "6px 14px",
+              background: "#2a2a2a",
+              color: "#fff",
+              border: "1px solid #555",
+              borderRadius: 6,
+              cursor: "pointer",
+              fontSize: 16,
+            }}
+          >
+            ▶
+          </button>
+          <span style={{ color: "#ccc", fontSize: 14, textTransform: "capitalize" }}>
+            {fechaLarga}
+          </span>
           <button
             onClick={() => call({ action: "overview", date })}
             style={{
