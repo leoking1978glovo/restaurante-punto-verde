@@ -55,7 +55,7 @@ function isExpired(date: string, start: string): boolean {
 
 async function getReservationsOpen(): Promise<boolean> {
   const value = await redis.get<string>("reservations:open");
-  return value !== "0"; // por defecto: abiertas
+  return String(value) !== "0"; // por defecto: abiertas
 }
 
 function isAuthorized(request: Request): boolean {

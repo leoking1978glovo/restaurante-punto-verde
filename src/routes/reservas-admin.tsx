@@ -79,7 +79,7 @@ const adminAction = createServerFn({ method: "POST" })
 
     async function getReservationsOpen(): Promise<boolean> {
       const value = await redis.get<string>("reservations:open");
-      return value !== "0"; // por defecto: abiertas
+      return String(value) !== "0"; // por defecto: abiertas
     }
 
     function parseBooking(value: unknown) {
