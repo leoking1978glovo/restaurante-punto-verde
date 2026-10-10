@@ -39,7 +39,7 @@ export const Route = createFileRoute("/api/validate-address")({
         try {
           const q = encodeURIComponent(direccion + ", Almeria, España");
           const url =
-            "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=es&accept-language=es&q=" +
+            "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=es&accept-language=es&addressdetails=1&q=" +
             q;
           const r = await fetch(url, {
             headers: { "User-Agent": "punto-verde-tpv/1.0" },
