@@ -254,6 +254,31 @@ function shiftDate(iso: string, days: number): string {
   return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
 }
 
+function timeToMinutes(t: string): number {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function nowMinutesMadrid(): number {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Madrid",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date());
+  const h = Number(parts.find((p) => p.type === "hour")?.value ?? "0");
+  const m = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
+  return h * 60 + m;
+}
+
+// Minutos de retraso de una reserva (solo hoy, entre 5 y 90 min despues
+// de su hora). 0 = sin retraso relevante.
+function retrasoMinutos(date: string, start: string): number {
+  if (date !== todayMadrid()) return 0;
+  const diff = nowMinutesMadrid() - timeToMinutes(start);
+  return diff >= 5 && diff < 90 ? diff : 0;
+}
+
 function AdminReservas() {
   const [password, setPassword] = useState("");
   const [authed, setAuthed] = useState(false);
@@ -395,6 +420,7 @@ function AdminReservas() {
         padding: 20,
       }}
     >
+      <style>{`@keyframes pv-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }`}</style>
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
         <div
           style={{
@@ -516,18 +542,28 @@ function AdminReservas() {
         >
           {tables.map((t) => {
             const enUso = !t.free && t.booking?.status === "ocupada";
+            const retraso =
+              !t.free && t.booking
+                ? retrasoMinutos(date, t.booking.start)
+                : 0;
+            const parpadea = retraso > 0 && !enUso;
             return (
               <div
                 key={t.id}
                 style={{
                   padding: 14,
                   borderRadius: 10,
-                  background: t.free
-                    ? "#2d5a2d"
-                    : enUso
-                      ? "#2d4a7a"
-                      : "#7a2d2d",
+                  background: parpadea
+                    ? "#8a6d1d"
+                    : t.free
+                      ? "#2d5a2d"
+                      : enUso
+                        ? "#2d4a7a"
+                        : "#7a2d2d",
                   minHeight: 70,
+                  animation: parpadea
+                    ? "pv-blink 1s ease-in-out infinite"
+                    : undefined,
                 }}
               >
                 <div style={{ fontWeight: "bold", fontSize: 18 }}>
@@ -536,9 +572,13 @@ function AdminReservas() {
                 <div style={{ fontSize: 13 }}>
                   {t.free
                     ? "Libre"
-                    : `${enUso ? "EN USO — " : ""}${t.booking.start} — ${
-                        t.booking.name
-                      }${t.booking.notes ? ` (${t.booking.notes})` : ""}`}
+                    : parpadea
+                      ? `RETRASO ${retraso} min — ${t.booking.start} — ${
+                          t.booking.name
+                        }`
+                      : `${enUso ? "EN USO — " : ""}${t.booking.start} — ${
+                          t.booking.name
+                        }${t.booking.notes ? ` (${t.booking.notes})` : ""}`}
                 </div>
               </div>
             );
