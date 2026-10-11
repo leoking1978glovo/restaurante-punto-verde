@@ -202,11 +202,12 @@ export const Route = createFileRoute("/api/tables")({
               404,
             );
           }
-          await redis.hset(
-            key,
-            table,
-            JSON.stringify({ ...booking, status: "ocupada" }),
-          );
+          const updatedBooking = JSON.stringify({
+            ...booking,
+            status: "ocupada",
+          });
+          await redis.hdel(key, table);
+          await redis.hsetnx(key, table, updatedBooking);
           return json({ ok: true, table, status: "ocupada" });
         }
 

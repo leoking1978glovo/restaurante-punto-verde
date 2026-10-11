@@ -155,11 +155,12 @@ const adminAction = createServerFn({ method: "POST" })
         if (!booking) {
           return { ok: false, error: `No hay reserva en la mesa ${table}` };
         }
-        await redis.hset(
-          `tables:${date}`,
-          table,
-          JSON.stringify({ ...booking, status: "ocupada" }),
-        );
+        const updatedBooking = JSON.stringify({
+          ...booking,
+          status: "ocupada",
+        });
+        await redis.hdel(`tables:${date}`, table);
+        await redis.hsetnx(`tables:${date}`, table, updatedBooking);
         return {
           ok: true,
           date,
