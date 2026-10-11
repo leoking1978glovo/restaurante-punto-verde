@@ -89,6 +89,7 @@ const adminAction = createServerFn({ method: "POST" })
           name: string;
           phone: string;
           notes?: string;
+          status?: string; // "reservada" (defecto) u "ocupada" (cliente sentado)
         };
         return b && typeof b.start === "string" ? b : null;
       } catch {
@@ -151,6 +152,28 @@ const adminAction = createServerFn({ method: "POST" })
       return { ok: true, date, ...(await overview(date)) };
     }
 
+    if (data.action === "checkin") {
+      const { date, table } = data;
+      if (!date || !table) return { ok: false, error: "Faltan datos" };
+      const raw = await redis.hget<string>(`tables:${date}`, table);
+      const booking = raw ? parseBooking(raw) : null;
+      if (!booking) {
+        return { ok: false, error: `No hay reserva en la mesa ${table}` };
+      }
+      await redis.hset(
+        `tables:${date}`,
+        table,
+        JSON.stringify({ ...booking, status: "ocupada" }),
+      );
+      return {
+        ok: true,
+        date,
+        table,
+        msg: `Mesa ${table} EN USO`,
+        ...(await overview(date)),
+      };
+    }
+
     if (data.action === "add") {
       const { date, time, name, phone, notes } = data;
       if (
@@ -188,6 +211,7 @@ const adminAction = createServerFn({ method: "POST" })
           name,
           phone,
           notes: notes ?? "",
+          status: "reservada",
           createdAt: new Date().toISOString(),
         }),
       );
@@ -235,11 +259,13 @@ function AdminReservas() {
       setMsg(
         payload.action === "add" && res.table
           ? `Mesa ${res.table} asignada`
-          : payload.action === "setReservations"
-            ? res.reservationsOpen
-              ? "Reservas ABIERTAS"
-              : "Reservas CERRADAS"
-            : "",
+          : payload.action === "checkin"
+            ? res.msg ?? `Mesa EN USO`
+            : payload.action === "setReservations"
+              ? res.reservationsOpen
+                ? "Reservas ABIERTAS"
+                : "Reservas CERRADAS"
+              : "",
       );
     } else {
       setMsg(res.error ?? "Error");
@@ -455,64 +481,99 @@ function AdminReservas() {
             marginBottom: 24,
           }}
         >
-          {tables.map((t) => (
-            <div
-              key={t.id}
-              style={{
-                padding: 14,
-                borderRadius: 10,
-                background: t.free ? "#2d5a2d" : "#7a2d2d",
-                minHeight: 70,
-              }}
-            >
-              <div style={{ fontWeight: "bold", fontSize: 18 }}>
-                Mesa {t.id}
+          {tables.map((t) => {
+            const enUso = !t.free && t.booking?.status === "ocupada";
+            return (
+              <div
+                key={t.id}
+                style={{
+                  padding: 14,
+                  borderRadius: 10,
+                  background: t.free
+                    ? "#2d5a2d"
+                    : enUso
+                      ? "#2d4a7a"
+                      : "#7a2d2d",
+                  minHeight: 70,
+                }}
+              >
+                <div style={{ fontWeight: "bold", fontSize: 18 }}>
+                  Mesa {t.id}
+                </div>
+                <div style={{ fontSize: 13 }}>
+                  {t.free
+                    ? "Libre"
+                    : `${enUso ? "EN USO — " : ""}${t.booking.start} — ${
+                        t.booking.name
+                      }${t.booking.notes ? ` (${t.booking.notes})` : ""}`}
+                </div>
               </div>
-              <div style={{ fontSize: 13 }}>
-                {t.free
-                  ? "Libre"
-                  : `${t.booking.start} — ${t.booking.name}${
-                      t.booking.notes ? ` (${t.booking.notes})` : ""
-                    }`}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <h2>Reservas del dia ({reservations.length})</h2>
         {reservations.length === 0 && <p>No hay reservas este dia.</p>}
-        {reservations.map((r: any) => (
-          <div
-            key={r.table}
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              background: "#2a2a2a",
-              padding: "10px 14px",
-              borderRadius: 8,
-              marginBottom: 8,
-            }}
-          >
-            <span>
-              <strong>{r.start}</strong> — Mesa {r.table} — {r.name} — {r.phone}
-              {r.notes ? ` — 📝 ${r.notes}` : ""}
-            </span>
-            <button
-              onClick={() => call({ action: "cancel", date, table: r.table })}
+        {reservations.map((r: any) => {
+          const enUso = r.status === "ocupada";
+          return (
+            <div
+              key={r.table}
               style={{
-                background: "#a33",
-                color: "#fff",
-                border: "none",
-                borderRadius: 6,
-                padding: "6px 10px",
-                cursor: "pointer",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 8,
+                background: enUso ? "#22304a" : "#2a2a2a",
+                padding: "10px 14px",
+                borderRadius: 8,
+                marginBottom: 8,
               }}
             >
-              Cancelar
-            </button>
-          </div>
-        ))}
+              <span>
+                <strong>{r.start}</strong> — Mesa {r.table} — {r.name} —{" "}
+                {r.phone}
+                {r.notes ? ` — 📝 ${r.notes}` : ""}
+                {enUso ? " — 🔵 EN USO" : ""}
+              </span>
+              <span style={{ display: "flex", gap: 6 }}>
+                {!enUso && (
+                  <button
+                    onClick={() =>
+                      call({ action: "checkin", date, table: r.table })
+                    }
+                    style={{
+                      background: "#2d4a7a",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 6,
+                      padding: "6px 10px",
+                      cursor: "pointer",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    Sentar
+                  </button>
+                )}
+                <button
+                  onClick={() =>
+                    call({ action: "cancel", date, table: r.table })
+                  }
+                  style={{
+                    background: "#a33",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 6,
+                    padding: "6px 10px",
+                    cursor: "pointer",
+                  }}
+                >
+                  {enUso ? "Finalizar" : "Cancelar"}
+                </button>
+              </span>
+            </div>
+          );
+        })}
 
         <h2 style={{ marginTop: 24 }}>Anadir reserva manual</h2>
         <div

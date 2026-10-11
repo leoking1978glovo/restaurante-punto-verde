@@ -27,37 +27,6 @@ function overlaps(a: string, b: string): boolean {
   return startA < startB + dur && startA + dur > startB;
 }
 
-function todayMadrid(): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Madrid",
-  }).format(new Date());
-}
-
-function nowMinutesMadrid(): number {
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Europe/Madrid",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).formatToParts(new Date());
-  const h = Number(parts.find((p) => p.type === "hour")?.value ?? "0");
-  const m = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
-  return h * 60 + m;
-}
-
-// Una reserva esta "cumplida" (y la mesa liberada) cuando paso su hora + duracion.
-function isExpired(date: string, start: string): boolean {
-  const today = todayMadrid();
-  if (date < today) return true;
-  if (date > today) return false;
-  return timeToMinutes(start) + DURATION_HOURS * 60 <= nowMinutesMadrid();
-}
-
-async function getReservationsOpen(): Promise<boolean> {
-  const value = await redis.get<string>("reservations:open");
-  return String(value) !== "0"; // por defecto: abiertas
-}
-
 function isAuthorized(request: Request): boolean {
   const expected = process.env.TABLES_API_KEY;
   if (!expected) return false;
@@ -76,6 +45,7 @@ interface Booking {
   name: string;
   phone: string;
   notes: string;
+  status?: string; // "reservada" (por defecto) u "ocupada" (cliente sentado)
   createdAt: string;
 }
 
@@ -95,18 +65,12 @@ async function getOccupied(
   date: string,
   time: string,
 ): Promise<Map<string, Booking>> {
-  const raw = await redis.hgetall<Record<string, unknown>>(`tables:${date}`);
+  const raw = await redis.hgetall<Record<string, string>>(`tables:${date}`);
   const occupied = new Map<string, Booking>();
   if (!raw) return occupied;
   for (const [table, value] of Object.entries(raw)) {
     const booking = parseBooking(value);
-    if (
-      booking &&
-      !isExpired(date, booking.start) &&
-      overlaps(time, booking.start)
-    ) {
-      occupied.set(table, booking);
-    }
+    if (booking && overlaps(time, booking.start)) occupied.set(table, booking);
   }
   return occupied;
 }
@@ -126,28 +90,16 @@ export const Route = createFileRoute("/api/tables")({
           const reservations = [];
           for (const key of keys) {
             const date = key.replace("tables:", "");
-            const raw = await redis.hgetall<Record<string, unknown>>(key);
+            const raw = await redis.hgetall<Record<string, string>>(key);
             if (!raw) continue;
             for (const [table, value] of Object.entries(raw)) {
               const booking = parseBooking(value);
-              if (
-                booking &&
-                booking.phone === phone &&
-                !isExpired(date, booking.start)
-              ) {
+              if (booking && booking.phone === phone) {
                 reservations.push({ date, table, ...booking });
               }
             }
           }
           return json({ ok: true, phone, reservations });
-        }
-
-        // Consulta de estado del interruptor de reservas (para el agente)
-        if (url.searchParams.get("status") === "1") {
-          return json({
-            ok: true,
-            reservationsOpen: await getReservationsOpen(),
-          });
         }
 
         const date = url.searchParams.get("date") ?? "";
@@ -173,12 +125,14 @@ export const Route = createFileRoute("/api/tables")({
           time,
           durationHours: DURATION_HOURS,
           totalTables: TOTAL_TABLES,
-          reservationsOpen: await getReservationsOpen(),
           freeTables,
           occupiedCount: occupied.size,
           occupied: [...occupied.entries()].map(([table, b]) => ({
             table,
             start: b.start,
+            name: b.name,
+            notes: b.notes,
+            status: b.status ?? "reservada",
           })),
         });
       },
@@ -205,18 +159,24 @@ export const Route = createFileRoute("/api/tables")({
         const { action, date, time, table, name, phone, notes } = body;
 
         if (
-          (action !== "hold" && action !== "release") ||
+          !action ||
+          !["hold", "release", "checkin"].includes(action) ||
           !date ||
-          !DATE_RE.test(date) ||
-          !time ||
-          !TIME_RE.test(time)
+          !DATE_RE.test(date)
         ) {
           return json(
             {
               ok: false,
               error:
-                "Parametros invalidos. Requiere action ('hold'|'release'), date=YYYY-MM-DD, time=HH:MM",
+                "Parametros invalidos. Requiere action ('hold'|'release'|'checkin') y date=YYYY-MM-DD",
             },
+            400,
+          );
+        }
+
+        if (action === "hold" && (!time || !TIME_RE.test(time))) {
+          return json(
+            { ok: false, error: "La accion hold requiere time=HH:MM" },
             400,
           );
         }
@@ -229,19 +189,26 @@ export const Route = createFileRoute("/api/tables")({
           return json({ ok: true, released: table });
         }
 
-        // Interruptor de reservas: si esta cerrado, se rechaza la reserva.
-        if (!(await getReservationsOpen())) {
-          return json(
-            {
-              ok: false,
-              reason: "closed",
-              message: "Las reservas online estan cerradas ahora mismo.",
-            },
-            403,
+        if (action === "checkin") {
+          if (!table) return json({ ok: false, error: "Falta table" }, 400);
+          const raw = await redis.hget<string>(key, table);
+          const booking = raw ? parseBooking(raw) : null;
+          if (!booking) {
+            return json(
+              { ok: false, error: `No hay reserva en la mesa ${table}` },
+              404,
+            );
+          }
+          await redis.hset(
+            key,
+            table,
+            JSON.stringify({ ...booking, status: "ocupada" }),
           );
+          return json({ ok: true, table, status: "ocupada" });
         }
 
-        const occupied = await getOccupied(date, time);
+        // action === "hold"
+        const occupied = await getOccupied(date, time!);
         const freeTables = tableIds().filter((t) => !occupied.has(t));
 
         if (freeTables.length === 0) {
@@ -260,17 +227,18 @@ export const Route = createFileRoute("/api/tables")({
           table && freeTables.includes(table) ? table : freeTables[0];
 
         const booking: Booking = {
-          start: time,
+          start: time!,
           name: name ?? "",
           phone: phone ?? "",
           notes: notes ?? "",
+          status: "reservada",
           createdAt: new Date().toISOString(),
         };
 
         const result = await redis.hsetnx(key, chosen, JSON.stringify(booking));
 
         if (result === 0) {
-          const updated = await getOccupied(date, time);
+          const updated = await getOccupied(date, time!);
           return json(
             {
               ok: false,
