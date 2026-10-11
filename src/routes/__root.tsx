@@ -92,6 +92,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "keywords", content: "restaurante colombiano, Almeria, bandeja paisa, comida colombiana, restaurante Punto Verde, cocina tradicional" },
       { name: "author", content: "Punto Verde" },
       { name: "robots", content: "index, follow" },
+      { name: "google-site-verification", content: "wFDMvz1Nf9ctuhCrLXUKFMaeo4uFf1N6y8o_fExFamI" },
       { name: "theme-color", content: "#5F7A3A" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
