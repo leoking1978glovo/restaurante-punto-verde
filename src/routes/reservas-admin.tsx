@@ -43,14 +43,6 @@ const adminAction = createServerFn({ method: "POST" })
       return h * 60 + m;
     }
 
-    function overlaps(a: string, b: string): boolean {
-      const dur = 90;
-      return (
-        timeToMinutes(a) < timeToMinutes(b) + dur &&
-        timeToMinutes(a) + dur > timeToMinutes(b)
-      );
-    }
-
     function todayMadrid(): string {
       return new Intl.DateTimeFormat("en-CA", {
         timeZone: "Europe/Madrid",
@@ -189,33 +181,52 @@ const adminAction = createServerFn({ method: "POST" })
           error: "Faltan datos (fecha, hora, nombre, telefono)",
         };
       }
+      // Una mesa con CUALQUIER reserva (no expirada) ese dia se considera ocupada.
       const raw = await redis.hgetall<Record<string, unknown>>(
         `tables:${date}`,
       );
       const occupied = new Set<string>();
       for (const [t, value] of Object.entries(raw ?? {})) {
         const b = parseBooking(value);
-        if (b && !isExpired(date, b.start) && overlaps(time, b.start))
-          occupied.add(t);
+        if (b && !isExpired(date, b.start)) occupied.add(t);
       }
       const free = tableIds().filter((t) => !occupied.has(t));
       if (free.length === 0)
-        return { ok: false, error: `No hay mesas libres a las ${time}` };
-      const chosen =
-        data.table && free.includes(data.table) ? data.table : free[0];
-      await redis.hsetnx(
-        `tables:${date}`,
-        chosen,
-        JSON.stringify({
-          start: time,
-          name,
-          phone,
-          notes: notes ?? "",
-          status: "reservada",
-          createdAt: new Date().toISOString(),
-        }),
-      );
-      return { ok: true, date, table: chosen, ...(await overview(date)) };
+        return { ok: false, error: "No hay mesas disponibles ese dia" };
+
+      const booking = {
+        start: time,
+        name,
+        phone,
+        notes: notes ?? "",
+        status: "reservada",
+        createdAt: new Date().toISOString(),
+      };
+
+      // Candidatas: la mesa pedida primero (si esta libre), luego el resto.
+      // Se prueba una a una hasta que el guardado funcione de verdad.
+      const candidates = [
+        ...(data.table && free.includes(data.table) ? [data.table] : []),
+        ...free.filter((t) => t !== data.table),
+      ];
+
+      for (const candidate of candidates) {
+        const written = await redis.hsetnx(
+          `tables:${date}`,
+          candidate,
+          JSON.stringify(booking),
+        );
+        if (written === 1) {
+          return {
+            ok: true,
+            date,
+            table: candidate,
+            ...(await overview(date)),
+          };
+        }
+      }
+
+      return { ok: false, error: "No se pudo asignar mesa, intentalo de nuevo" };
     }
 
     return { ok: false, error: "Accion desconocida" };
@@ -463,185 +474,4 @@ function AdminReservas() {
               background: "#5F7A3A",
               color: "#fff",
               border: "none",
-              borderRadius: 6,
-              cursor: "pointer",
-            }}
-          >
-            Actualizar
-          </button>
-          {msg && <span style={{ color: "#ffd580" }}>{msg}</span>}
-        </div>
-
-        <h2>Mesas</h2>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(5, 1fr)",
-            gap: 10,
-            marginBottom: 24,
-          }}
-        >
-          {tables.map((t) => {
-            const enUso = !t.free && t.booking?.status === "ocupada";
-            return (
-              <div
-                key={t.id}
-                style={{
-                  padding: 14,
-                  borderRadius: 10,
-                  background: t.free
-                    ? "#2d5a2d"
-                    : enUso
-                      ? "#2d4a7a"
-                      : "#7a2d2d",
-                  minHeight: 70,
-                }}
-              >
-                <div style={{ fontWeight: "bold", fontSize: 18 }}>
-                  Mesa {t.id}
-                </div>
-                <div style={{ fontSize: 13 }}>
-                  {t.free
-                    ? "Libre"
-                    : `${enUso ? "EN USO — " : ""}${t.booking.start} — ${
-                        t.booking.name
-                      }${t.booking.notes ? ` (${t.booking.notes})` : ""}`}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <h2>Reservas del dia ({reservations.length})</h2>
-        {reservations.length === 0 && <p>No hay reservas este dia.</p>}
-        {reservations.map((r: any) => {
-          const enUso = r.status === "ocupada";
-          return (
-            <div
-              key={r.table}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                gap: 8,
-                background: enUso ? "#22304a" : "#2a2a2a",
-                padding: "10px 14px",
-                borderRadius: 8,
-                marginBottom: 8,
-              }}
-            >
-              <span>
-                <strong>{r.start}</strong> — Mesa {r.table} — {r.name} —{" "}
-                {r.phone}
-                {r.notes ? ` — 📝 ${r.notes}` : ""}
-                {enUso ? " — 🔵 EN USO" : ""}
-              </span>
-              <span style={{ display: "flex", gap: 6 }}>
-                {!enUso && (
-                  <button
-                    onClick={() =>
-                      call({ action: "checkin", date, table: r.table })
-                    }
-                    style={{
-                      background: "#2d4a7a",
-                      color: "#fff",
-                      border: "none",
-                      borderRadius: 6,
-                      padding: "6px 10px",
-                      cursor: "pointer",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    Sentar
-                  </button>
-                )}
-                <button
-                  onClick={() =>
-                    call({ action: "cancel", date, table: r.table })
-                  }
-                  style={{
-                    background: "#a33",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: 6,
-                    padding: "6px 10px",
-                    cursor: "pointer",
-                  }}
-                >
-                  {enUso ? "Finalizar" : "Cancelar"}
-                </button>
-              </span>
-            </div>
-          );
-        })}
-
-        <h2 style={{ marginTop: 24 }}>Anadir reserva manual</h2>
-        <div
-          style={{
-            display: "flex",
-            gap: 8,
-            flexWrap: "wrap",
-            background: "#2a2a2a",
-            padding: 14,
-            borderRadius: 8,
-          }}
-        >
-          <input
-            placeholder="Nombre"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            style={{ padding: 8, borderRadius: 6, border: "none" }}
-          />
-          <input
-            placeholder="Telefono"
-            value={form.phone}
-            onChange={(e) => setForm({ ...form, phone: e.target.value })}
-            style={{ padding: 8, borderRadius: 6, border: "none" }}
-          />
-          <input
-            type="time"
-            value={form.time}
-            onChange={(e) => setForm({ ...form, time: e.target.value })}
-            style={{ padding: 8, borderRadius: 6, border: "none" }}
-          />
-          <input
-            placeholder="Mesa (opcional)"
-            value={form.table}
-            onChange={(e) => setForm({ ...form, table: e.target.value })}
-            style={{ padding: 8, borderRadius: 6, border: "none", width: 100 }}
-          />
-          <input
-            placeholder="Notas (cumpleanos, alergias...)"
-            value={form.notes}
-            onChange={(e) => setForm({ ...form, notes: e.target.value })}
-            style={{
-              padding: 8,
-              borderRadius: 6,
-              border: "none",
-              flex: 1,
-              minWidth: 180,
-            }}
-          />
-          <button
-            onClick={() => call({ action: "add", date, ...form })}
-            style={{
-              padding: "8px 14px",
-              background: "#5F7A3A",
-              color: "#fff",
-              border: "none",
-              borderRadius: 6,
-              fontWeight: "bold",
-              cursor: "pointer",
-            }}
-          >
-            Guardar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export const Route = createFileRoute("/reservas-admin")({
-  component: AdminReservas,
-});
+             

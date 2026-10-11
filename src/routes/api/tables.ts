@@ -61,16 +61,19 @@ function parseBooking(value: unknown): Booking | null {
   }
 }
 
+// REGLA DE NEGOCIO: una mesa con CUALQUIER reserva de ese dia se considera
+// ocupada para todo el dia (una reserva por mesa y dia). El parametro time
+// se mantiene por compatibilidad.
 async function getOccupied(
   date: string,
-  time: string,
+  _time: string,
 ): Promise<Map<string, Booking>> {
   const raw = await redis.hgetall<Record<string, string>>(`tables:${date}`);
   const occupied = new Map<string, Booking>();
   if (!raw) return occupied;
   for (const [table, value] of Object.entries(raw)) {
     const booking = parseBooking(value);
-    if (booking && overlaps(time, booking.start)) occupied.set(table, booking);
+    if (booking) occupied.set(table, booking);
   }
   return occupied;
 }
@@ -216,15 +219,12 @@ export const Route = createFileRoute("/api/tables")({
             {
               ok: false,
               reason: "full",
-              message: `No hay mesas libres a las ${time} del ${date}.`,
+              message: `No hay mesas libres el ${date}.`,
               freeTables: [],
             },
             409,
           );
         }
-
-        const chosen =
-          table && freeTables.includes(table) ? table : freeTables[0];
 
         const booking: Booking = {
           start: time!,
@@ -235,22 +235,28 @@ export const Route = createFileRoute("/api/tables")({
           createdAt: new Date().toISOString(),
         };
 
-        const result = await redis.hsetnx(key, chosen, JSON.stringify(booking));
+        // Candidatas: la mesa pedida primero (si esta libre), luego el resto.
+        // Se prueba una a una hasta que el guardado funcione de verdad.
+        const candidates = [
+          ...(table && freeTables.includes(table) ? [table] : []),
+          ...freeTables.filter((t) => t !== table),
+        ];
 
-        if (result === 0) {
-          const updated = await getOccupied(date, time!);
-          return json(
-            {
-              ok: false,
-              reason: "table_occupied",
-              message: `La mesa ${chosen} acaba de ser ocupada.`,
-              freeTables: tableIds().filter((t) => !updated.has(t)),
-            },
-            409,
+        for (const candidate of candidates) {
+          const written = await redis.hsetnx(
+            key,
+            candidate,
+            JSON.stringify(booking),
           );
+          if (written === 1) {
+            return json({ ok: true, table: candidate, date, time });
+          }
         }
 
-        return json({ ok: true, table: chosen, date, time });
+        return json(
+          { ok: false, error: "No se pudo asignar mesa, intentalo de nuevo" },
+          409,
+        );
       },
     },
   },
