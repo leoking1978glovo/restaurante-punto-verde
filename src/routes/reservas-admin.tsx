@@ -22,217 +22,224 @@ const adminAction = createServerFn({ method: "POST" })
     }) => d,
   )
   .handler(async ({ data }) => {
-    if (
-      !process.env.ADMIN_PASSWORD ||
-      data.password !== process.env.ADMIN_PASSWORD
-    ) {
-      return { ok: false, error: "Contrasena incorrecta" };
-    }
-
-    const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-    const TIME_RE = /^\d{2}:\d{2}$/;
-
-    function tableIds(): string[] {
-      return Array.from({ length: TOTAL_TABLES }, (_, i) =>
-        String(i + 1).padStart(2, "0"),
-      );
-    }
-
-    function timeToMinutes(t: string): number {
-      const [h, m] = t.split(":").map(Number);
-      return h * 60 + m;
-    }
-
-    function todayMadrid(): string {
-      return new Intl.DateTimeFormat("en-CA", {
-        timeZone: "Europe/Madrid",
-      }).format(new Date());
-    }
-
-    function nowMinutesMadrid(): number {
-      const parts = new Intl.DateTimeFormat("en-GB", {
-        timeZone: "Europe/Madrid",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      }).formatToParts(new Date());
-      const h = Number(parts.find((p) => p.type === "hour")?.value ?? "0");
-      const m = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
-      return h * 60 + m;
-    }
-
-    // Reserva cumplida: paso su hora + 90 minutos -> se ignora y la mesa queda libre.
-    function isExpired(date: string, start: string): boolean {
-      const today = todayMadrid();
-      if (date < today) return true;
-      if (date > today) return false;
-      return timeToMinutes(start) + 90 <= nowMinutesMadrid();
-    }
-
-    async function getReservationsOpen(): Promise<boolean> {
-      const value = await redis.get<string>("reservations:open");
-      return String(value) !== "0"; // por defecto: abiertas
-    }
-
-    function parseBooking(value: unknown) {
-      try {
-        const b = (typeof value === "string" ? JSON.parse(value) : value) as {
-          start: string;
-          name: string;
-          phone: string;
-          notes?: string;
-          status?: string; // "reservada" (defecto) u "ocupada" (cliente sentado)
-        };
-        return b && typeof b.start === "string" ? b : null;
-      } catch {
-        return null;
-      }
-    }
-
-    async function overview(date: string) {
-      const raw = await redis.hgetall<Record<string, unknown>>(
-        `tables:${date}`,
-      );
-      const tables = tableIds().map((id) => {
-        const booking = raw ? parseBooking(raw[id]) : null;
-        const expired =
-          booking && isExpired(date, booking.start) ? true : false;
-        return {
-          id,
-          free: !booking || expired,
-          booking: expired ? null : booking,
-        };
-      });
-      const reservations = Object.entries(raw ?? {})
-        .map(([table, value]) => {
-          const booking = parseBooking(value);
-          return booking && !isExpired(date, booking.start)
-            ? { table, ...booking }
-            : null;
-        })
-        .filter(Boolean)
-        .sort((a: any, b: any) => a.start.localeCompare(b.start));
-      return {
-        tables,
-        reservations,
-        reservationsOpen: await getReservationsOpen(),
-      };
-    }
-
-    if (data.action === "overview") {
-      const date = data.date ?? "";
-      if (!DATE_RE.test(date)) return { ok: false, error: "Fecha invalida" };
-      return { ok: true, date, ...(await overview(date)) };
-    }
-
-    if (data.action === "setReservations") {
-      const open = data.open === true;
-      await redis.set("reservations:open", open ? "1" : "0");
-      return {
-        ok: true,
-        reservationsOpen: open,
-        ...(data.date && DATE_RE.test(data.date)
-          ? await overview(data.date)
-          : {}),
-      };
-    }
-
-    if (data.action === "cancel") {
-      const { date, table } = data;
-      if (!date || !table) return { ok: false, error: "Faltan datos" };
-      await redis.hdel(`tables:${date}`, table);
-      return { ok: true, date, ...(await overview(date)) };
-    }
-
-    if (data.action === "checkin") {
-      const { date, table } = data;
-      if (!date || !table) return { ok: false, error: "Faltan datos" };
-      const raw = await redis.hget<string>(`tables:${date}`, table);
-      const booking = raw ? parseBooking(raw) : null;
-      if (!booking) {
-        return { ok: false, error: `No hay reserva en la mesa ${table}` };
-      }
-      await redis.hset(
-        `tables:${date}`,
-        table,
-        JSON.stringify({ ...booking, status: "ocupada" }),
-      );
-      return {
-        ok: true,
-        date,
-        table,
-        msg: `Mesa ${table} EN USO`,
-        ...(await overview(date)),
-      };
-    }
-
-    if (data.action === "add") {
-      const { date, time, name, phone, notes } = data;
+    try {
       if (
-        !date ||
-        !DATE_RE.test(date) ||
-        !time ||
-        !TIME_RE.test(time) ||
-        !name ||
-        !phone
+        !process.env.ADMIN_PASSWORD ||
+        data.password !== process.env.ADMIN_PASSWORD
       ) {
-        return {
-          ok: false,
-          error: "Faltan datos (fecha, hora, nombre, telefono)",
-        };
+        return { ok: false, error: "Contrasena incorrecta" };
       }
-      // Una mesa con CUALQUIER reserva (no expirada) ese dia se considera ocupada.
-      const raw = await redis.hgetall<Record<string, unknown>>(
-        `tables:${date}`,
-      );
-      const occupied = new Set<string>();
-      for (const [t, value] of Object.entries(raw ?? {})) {
-        const b = parseBooking(value);
-        if (b && !isExpired(date, b.start)) occupied.add(t);
-      }
-      const free = tableIds().filter((t) => !occupied.has(t));
-      if (free.length === 0)
-        return { ok: false, error: "No hay mesas disponibles ese dia" };
 
-      const booking = {
-        start: time,
-        name,
-        phone,
-        notes: notes ?? "",
-        status: "reservada",
-        createdAt: new Date().toISOString(),
-      };
+      const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+      const TIME_RE = /^\d{2}:\d{2}$/;
 
-      // Candidatas: la mesa pedida primero (si esta libre), luego el resto.
-      // Se prueba una a una hasta que el guardado funcione de verdad.
-      const candidates = [
-        ...(data.table && free.includes(data.table) ? [data.table] : []),
-        ...free.filter((t) => t !== data.table),
-      ];
-
-      for (const candidate of candidates) {
-        const written = await redis.hsetnx(
-          `tables:${date}`,
-          candidate,
-          JSON.stringify(booking),
+      function tableIds(): string[] {
+        return Array.from({ length: TOTAL_TABLES }, (_, i) =>
+          String(i + 1).padStart(2, "0"),
         );
-        if (written === 1) {
-          return {
-            ok: true,
-            date,
-            table: candidate,
-            ...(await overview(date)),
+      }
+
+      function timeToMinutes(t: string): number {
+        const [h, m] = t.split(":").map(Number);
+        return h * 60 + m;
+      }
+
+      function todayMadrid(): string {
+        return new Intl.DateTimeFormat("en-CA", {
+          timeZone: "Europe/Madrid",
+        }).format(new Date());
+      }
+
+      function nowMinutesMadrid(): number {
+        const parts = new Intl.DateTimeFormat("en-GB", {
+          timeZone: "Europe/Madrid",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        }).formatToParts(new Date());
+        const h = Number(parts.find((p) => p.type === "hour")?.value ?? "0");
+        const m = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
+        return h * 60 + m;
+      }
+
+      // Reserva cumplida: paso su hora + 90 minutos -> se ignora y la mesa queda libre.
+      function isExpired(date: string, start: string): boolean {
+        const today = todayMadrid();
+        if (date < today) return true;
+        if (date > today) return false;
+        return timeToMinutes(start) + 90 <= nowMinutesMadrid();
+      }
+
+      async function getReservationsOpen(): Promise<boolean> {
+        const value = await redis.get<string>("reservations:open");
+        return String(value) !== "0"; // por defecto: abiertas
+      }
+
+      function parseBooking(value: unknown) {
+        try {
+          const b = (typeof value === "string"
+            ? JSON.parse(value)
+            : value) as {
+            start: string;
+            name: string;
+            phone: string;
+            notes?: string;
+            status?: string; // "reservada" (defecto) u "ocupada" (cliente sentado)
           };
+          return b && typeof b.start === "string" ? b : null;
+        } catch {
+          return null;
         }
       }
 
-      return {
-        ok: false,
-        error: "No se pudo asignar mesa, intentalo de nuevo",
-      };
-    }
+      async function overview(date: string) {
+        const raw = await redis.hgetall<Record<string, unknown>>(
+          `tables:${date}`,
+        );
+        const tables = tableIds().map((id) => {
+          const booking = raw ? parseBooking(raw[id]) : null;
+          const expired =
+            booking && isExpired(date, booking.start) ? true : false;
+          return {
+            id,
+            free: !booking || expired,
+            booking: expired ? null : booking,
+          };
+        });
+        const reservations = Object.entries(raw ?? {})
+          .map(([table, value]) => {
+            const booking = parseBooking(value);
+            return booking && !isExpired(date, booking.start)
+              ? { table, ...booking }
+              : null;
+          })
+          .filter(Boolean)
+          .sort((a: any, b: any) => a.start.localeCompare(b.start));
+        return {
+          tables,
+          reservations,
+          reservationsOpen: await getReservationsOpen(),
+        };
+      }
 
-    return { ok: false, error: "Accion desconocida" };
+      if (data.action === "overview") {
+        const date = data.date ?? "";
+        if (!DATE_RE.test(date)) return { ok: false, error: "Fecha invalida" };
+        return { ok: true, date, ...(await overview(date)) };
+      }
+
+      if (data.action === "setReservations") {
+        const open = data.open === true;
+        await redis.set("reservations:open", open ? "1" : "0");
+        return {
+          ok: true,
+          reservationsOpen: open,
+          ...(data.date && DATE_RE.test(data.date)
+            ? await overview(data.date)
+            : {}),
+        };
+      }
+
+      if (data.action === "cancel") {
+        const { date, table } = data;
+        if (!date || !table) return { ok: false, error: "Faltan datos" };
+        await redis.hdel(`tables:${date}`, table);
+        return { ok: true, date, ...(await overview(date)) };
+      }
+
+      if (data.action === "checkin") {
+        const { date, table } = data;
+        if (!date || !table) return { ok: false, error: "Faltan datos" };
+        const raw = await redis.hget<string>(`tables:${date}`, table);
+        const booking = raw ? parseBooking(raw) : null;
+        if (!booking) {
+          return { ok: false, error: `No hay reserva en la mesa ${table}` };
+        }
+        await redis.hset(
+          `tables:${date}`,
+          table,
+          JSON.stringify({ ...booking, status: "ocupada" }),
+        );
+        return {
+          ok: true,
+          date,
+          table,
+          msg: `Mesa ${table} EN USO`,
+          ...(await overview(date)),
+        };
+      }
+
+      if (data.action === "add") {
+        const { date, time, name, phone, notes } = data;
+        if (
+          !date ||
+          !DATE_RE.test(date) ||
+          !time ||
+          !TIME_RE.test(time) ||
+          !name ||
+          !phone
+        ) {
+          return {
+            ok: false,
+            error: "Faltan datos (fecha, hora, nombre, telefono)",
+          };
+        }
+        // Una mesa con CUALQUIER reserva (no expirada) ese dia se considera ocupada.
+        const raw = await redis.hgetall<Record<string, unknown>>(
+          `tables:${date}`,
+        );
+        const occupied = new Set<string>();
+        for (const [t, value] of Object.entries(raw ?? {})) {
+          const b = parseBooking(value);
+          if (b && !isExpired(date, b.start)) occupied.add(t);
+        }
+        const free = tableIds().filter((t) => !occupied.has(t));
+        if (free.length === 0)
+          return { ok: false, error: "No hay mesas disponibles ese dia" };
+
+        const booking = {
+          start: time,
+          name,
+          phone,
+          notes: notes ?? "",
+          status: "reservada",
+          createdAt: new Date().toISOString(),
+        };
+
+        // Candidatas: la mesa pedida primero (si esta libre), luego el resto.
+        // Se prueba una a una hasta que el guardado funcione de verdad.
+        const candidates = [
+          ...(data.table && free.includes(data.table) ? [data.table] : []),
+          ...free.filter((t) => t !== data.table),
+        ];
+
+        for (const candidate of candidates) {
+          const written = await redis.hsetnx(
+            `tables:${date}`,
+            candidate,
+            JSON.stringify(booking),
+          );
+          if (written === 1) {
+            return {
+              ok: true,
+              date,
+              table: candidate,
+              ...(await overview(date)),
+            };
+          }
+        }
+
+        return {
+          ok: false,
+          error: "No se pudo asignar mesa, intentalo de nuevo",
+        };
+      }
+
+      return { ok: false, error: "Accion desconocida" };
+    } catch (e: any) {
+      // NUNCA dejar que una excepcion se trague en silencio:
+      return { ok: false, error: "Error tecnico: " + (e?.message ?? e) };
+    }
   });
 
 function todayMadrid(): string {
@@ -263,13 +270,24 @@ function AdminReservas() {
   });
 
   async function call(payload: any) {
-    const res: any = await adminAction({ data: { password, ...payload } });
+    let res: any;
+    try {
+      res = await adminAction({ data: { password, ...payload } });
+    } catch (e: any) {
+      // Si la llamada falla (red, servidor, excepcion), MOSTRARLO siempre
+      setMsg("Error de conexion: " + (e?.message ?? e));
+      return;
+    }
     if (res.ok) {
       setAuthed(true);
       if (res.tables) setTables(res.tables);
       if (res.reservations) setReservations(res.reservations);
       if (typeof res.reservationsOpen === "boolean")
         setReservationsOpen(res.reservationsOpen);
+      // Limpiar el formulario tras guardar una reserva nueva
+      if (payload.action === "add" && res.table) {
+        setForm({ name: "", phone: "", time: "15:00", table: "", notes: "" });
+      }
       setMsg(
         payload.action === "add" && res.table
           ? `Mesa ${res.table} asignada`
