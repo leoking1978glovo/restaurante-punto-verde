@@ -19,6 +19,7 @@ const adminAction = createServerFn({ method: "POST" })
       phone?: string;
       notes?: string;
       open?: boolean;
+      force?: boolean;
     }) => d,
   )
   .handler(async ({ data }) => {
@@ -185,6 +186,59 @@ const adminAction = createServerFn({ method: "POST" })
             error: "Faltan datos (fecha, hora, nombre, telefono)",
           };
         }
+        const nuevo = {
+          start: time,
+          name,
+          phone,
+          notes: notes ?? "",
+          status: "reservada",
+          createdAt: new Date().toISOString(),
+        };
+
+        // MESA PEDIDA EXPLICITAMENTE (control total del dueño):
+        // acepta "7" o "07". Si la mesa ya tiene una reserva, se pide
+        // confirmacion y se sustituye solo si el dueño acepta (force).
+        if (data.table) {
+          const pedida = data.table.trim().padStart(2, "0");
+          if (!tableIds().includes(pedida)) {
+            return {
+              ok: false,
+              error: `Mesa invalida: ${data.table}. Usa un numero del 01 al ${String(
+                TOTAL_TABLES,
+              ).padStart(2, "0")}.`,
+            };
+          }
+          const rawOne = await redis.hget<string>(`tables:${date}`, pedida);
+          const existing = rawOne ? parseBooking(rawOne) : null;
+          if (
+            existing &&
+            !isExpired(date, existing.start) &&
+            data.force !== true
+          ) {
+            return {
+              ok: false,
+              needsConfirm: true,
+              error: `La mesa ${pedida} ya tiene una reserva a las ${existing.start} (${existing.name}). Sustituirla?`,
+            };
+          }
+          await redis.hdel(`tables:${date}`, pedida);
+          const written = await redis.hsetnx(
+            `tables:${date}`,
+            pedida,
+            JSON.stringify(nuevo),
+          );
+          if (written === 1) {
+            return {
+              ok: true,
+              date,
+              table: pedida,
+              ...(await overview(date)),
+            };
+          }
+          return { ok: false, error: "No se pudo asignar la mesa pedida" };
+        }
+
+        // SIN MESA PEDIDA: asignacion automatica como siempre.
         // Una mesa con CUALQUIER reserva (no expirada) ese dia se considera ocupada.
         const raw = await redis.hgetall<Record<string, unknown>>(
           `tables:${date}`,
@@ -198,21 +252,8 @@ const adminAction = createServerFn({ method: "POST" })
         if (free.length === 0)
           return { ok: false, error: "No hay mesas disponibles ese dia" };
 
-        const booking = {
-          start: time,
-          name,
-          phone,
-          notes: notes ?? "",
-          status: "reservada",
-          createdAt: new Date().toISOString(),
-        };
-
-        // Candidatas: la mesa pedida primero (si esta libre), luego el resto.
         // Se prueba una a una hasta que el guardado funcione de verdad.
-        const candidates = [
-          ...(data.table && free.includes(data.table) ? [data.table] : []),
-          ...free.filter((t) => t !== data.table),
-        ];
+        const candidates = free;
 
         for (const candidate of candidates) {
           const written = await redis.hsetnx(
@@ -326,6 +367,14 @@ function AdminReservas() {
               : "",
       );
     } else {
+      if (res.needsConfirm) {
+        if (window.confirm(res.error)) {
+          await call({ ...payload, force: true });
+        } else {
+          setMsg("Operacion cancelada");
+        }
+        return;
+      }
       setMsg(res.error ?? "Error");
       if (res.error === "Contrasena incorrecta") setAuthed(false);
     }
