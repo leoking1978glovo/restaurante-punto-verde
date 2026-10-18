@@ -335,6 +335,10 @@ function AdminReservas() {
     table: "",
     notes: "",
   });
+  // Tarjeta flotante: form = mesa libre (formulario de cliente), detail = mesa ocupada
+  const [popup, setPopup] = useState<
+    null | { table: string; mode: "form" | "detail" }
+  >(null);
 
   async function call(payload: any) {
     let res: any;
@@ -599,7 +603,17 @@ function AdminReservas() {
             return (
               <div
                 key={t.id}
+                onClick={() => {
+                  if (t.free) {
+                    setForm({ ...form, table: t.id });
+                    setPopup({ table: t.id, mode: "form" });
+                  } else {
+                    setPopup({ table: t.id, mode: "detail" });
+                  }
+                }}
+                title={t.free ? "Reservar esta mesa" : "Ver reserva"}
                 style={{
+                  cursor: "pointer",
                   padding: 14,
                   borderRadius: 10,
                   background: parpadea
@@ -759,6 +773,218 @@ function AdminReservas() {
             Guardar
           </button>
         </div>
+
+        {popup && (
+          <div
+            onClick={() => setPopup(null)}
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.6)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 50,
+              padding: 16,
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: "#2a2a2a",
+                padding: 24,
+                borderRadius: 12,
+                width: 360,
+                maxWidth: "100%",
+              }}
+            >
+              {popup.mode === "form" ? (
+                <>
+                  <h3 style={{ marginTop: 0 }}>Reserva — Mesa {popup.table}</h3>
+                  <input
+                    placeholder="Nombre"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    style={{
+                      width: "100%",
+                      padding: 10,
+                      marginBottom: 8,
+                      borderRadius: 6,
+                      border: "none",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                  <input
+                    placeholder="Telefono"
+                    value={form.phone}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                    style={{
+                      width: "100%",
+                      padding: 10,
+                      marginBottom: 8,
+                      borderRadius: 6,
+                      border: "none",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                  <input
+                    type="time"
+                    value={form.time}
+                    onChange={(e) => setForm({ ...form, time: e.target.value })}
+                    style={{
+                      width: "100%",
+                      padding: 10,
+                      marginBottom: 8,
+                      borderRadius: 6,
+                      border: "none",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                  <input
+                    placeholder="Notas (cumpleanos, alergias...)"
+                    value={form.notes}
+                    onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                    style={{
+                      width: "100%",
+                      padding: 10,
+                      marginBottom: 12,
+                      borderRadius: 6,
+                      border: "none",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button
+                      onClick={async () => {
+                        await call({
+                          action: "add",
+                          date,
+                          ...form,
+                          table: popup.table,
+                        });
+                        setPopup(null);
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: "10px 14px",
+                        background: "#5F7A3A",
+                        color: "#fff",
+                        border: "none",
+                        borderRadius: 6,
+                        fontWeight: "bold",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Guardar
+                    </button>
+                    <button
+                      onClick={() => setPopup(null)}
+                      style={{
+                        padding: "10px 14px",
+                        background: "#444",
+                        color: "#fff",
+                        border: "none",
+                        borderRadius: 6,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Cerrar
+                    </button>
+                  </div>
+                </>
+              ) : (
+                (() => {
+                  const t = tables.find((x) => x.id === popup.table);
+                  if (!t || !t.booking) return null;
+                  const enUso = t.booking.status === "ocupada";
+                  return (
+                    <>
+                      <h3 style={{ marginTop: 0 }}>
+                        Mesa {popup.table}
+                        {enUso ? " — EN USO" : ""}
+                      </h3>
+                      <p style={{ lineHeight: 1.6 }}>
+                        {t.booking.start} — {t.booking.name}
+                        <br />
+                        {t.booking.phone}
+                        {t.booking.notes ? (
+                          <>
+                            <br />
+                            📝 {t.booking.notes}
+                          </>
+                        ) : null}
+                      </p>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: 8,
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        {!enUso && (
+                          <button
+                            onClick={async () => {
+                              await call({
+                                action: "checkin",
+                                date,
+                                table: popup.table,
+                              });
+                              setPopup(null);
+                            }}
+                            style={{
+                              padding: "8px 12px",
+                              background: "#2d4a7a",
+                              color: "#fff",
+                              border: "none",
+                              borderRadius: 6,
+                              cursor: "pointer",
+                              fontWeight: "bold",
+                            }}
+                          >
+                            Sentar
+                          </button>
+                        )}
+                        <button
+                          onClick={async () => {
+                            await call({
+                              action: "cancel",
+                              date,
+                              table: popup.table,
+                            });
+                            setPopup(null);
+                          }}
+                          style={{
+                            padding: "8px 12px",
+                            background: "#a33",
+                            color: "#fff",
+                            border: "none",
+                            borderRadius: 6,
+                            cursor: "pointer",
+                          }}
+                        >
+                          {enUso ? "Finalizar" : "Cancelar"}
+                        </button>
+                        <button
+                          onClick={() => setPopup(null)}
+                          style={{
+                            padding: "8px 12px",
+                            background: "#444",
+                            color: "#fff",
+                            border: "none",
+                            borderRadius: 6,
+                            cursor: "pointer",
+                          }}
+                        >
+                          Cerrar
+                        </button>
+                      </div>
+                    </>
+                  );
+                })()
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
