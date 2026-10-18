@@ -340,11 +340,16 @@ function AdminReservas() {
     null | { table: string; mode: "form" | "detail" }
   >(null);
 
-  async function call(payload: any) {
+  async function call(payload: any, intento = 0) {
     let res: any;
     try {
       res = await adminAction({ data: { password, ...payload } });
     } catch (e: any) {
+      // Lecturas (overview): reintentar una vez por si fue un fallo pasajero
+      if (payload.action === "overview" && intento === 0) {
+        await new Promise((r) => setTimeout(r, 1500));
+        return call(payload, 1);
+      }
       // Si la llamada falla (red, servidor, excepcion), MOSTRARLO siempre
       setMsg("Error de conexion: " + (e?.message ?? e));
       return;
@@ -392,6 +397,22 @@ function AdminReservas() {
     }, 20000);
     return () => clearInterval(id);
   }, [authed, date, password]);
+
+  // Anti-suspension: si la pestana estuvo oculta/inactiva mas de 10
+  // minutos (navegador la congela para ahorrar bateria), al volver se
+  // recarga sola y queda operativa de nuevo sin tocar nada.
+  useEffect(() => {
+    let hiddenAt: number | null = null;
+    function onVis() {
+      if (document.hidden) {
+        hiddenAt = Date.now();
+      } else if (hiddenAt && Date.now() - hiddenAt > 10 * 60 * 1000) {
+        location.reload();
+      }
+    }
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, []);
 
   function goDay(days: number) {
     const next = shiftDate(date, days);
