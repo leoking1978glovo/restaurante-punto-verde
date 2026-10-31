@@ -5,9 +5,9 @@ import { useEffect, useRef, useState } from "react";
 
 const redis = Redis.fromEnv();
 
-// Lectura del contador de pedidos (misma clave que usa createOrderRef).
-// Protegida con la contraseña de administrador, igual que el panel de reservas.
-const getOrderCounter = createServerFn({ method: "POST" })
+// Vigila el contador de pedidos CONFIRMADOS EN COCINA (orders:ready),
+// no el de pedidos iniciados. Protegido con la contraseña de administrador.
+const getReadyCounter = createServerFn({ method: "POST" })
   .validator((d: { password: string }) => d)
   .handler(async ({ data }) => {
     try {
@@ -17,37 +17,44 @@ const getOrderCounter = createServerFn({ method: "POST" })
       ) {
         return { ok: false, error: "Contrasena incorrecta" };
       }
-      const counter = await redis.get<number>("orders:counter");
+      const counter = await redis.get<number>("orders:ready");
       return { ok: true, counter: Number(counter ?? 0) };
     } catch (e: any) {
       return { ok: false, error: "Error tecnico: " + (e?.message ?? e) };
     }
   });
 
-function tono(frecuencia: number, inicio: number, duracion: number, ctx: AudioContext) {
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.frequency.value = frecuencia;
-  osc.type = "sine";
-  gain.gain.setValueAtTime(0.001, ctx.currentTime + inicio);
-  gain.gain.exponentialRampToValueAtTime(0.6, ctx.currentTime + inicio + 0.02);
-  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + inicio + duracion);
-  osc.connect(gain).connect(ctx.destination);
-  osc.start(ctx.currentTime + inicio);
-  osc.stop(ctx.currentTime + inicio + duracion + 0.05);
-}
-
-// Timbre: tres dobles campanadas agudas (dificil de confundir con un mensaje normal)
-function tocarCampana() {
+// Alarma fuerte: rafaga de tonos agudos con armonicos, volumen maximo
+function alarmaFuerte() {
   try {
     const ctx = new AudioContext();
-    for (let i = 0; i < 3; i++) {
-      const base = i * 0.5;
-      tono(1318, base, 0.18, ctx);
-      tono(1760, base + 0.22, 0.3, ctx);
+    const master = ctx.createGain();
+    master.gain.value = 1.0; // volumen maximo permitido por el navegador
+    master.connect(ctx.destination);
+    const tonos = [880, 1108, 1318, 1760];
+    for (let rep = 0; rep < 4; rep++) {
+      const base = rep * 0.55;
+      for (let i = 0; i < tonos.length; i++) {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = i % 2 === 0 ? "square" : "sawtooth"; // mas penetrante que seno
+        osc.frequency.value = tonos[i];
+        gain.gain.setValueAtTime(0.0001, ctx.currentTime + base + i * 0.09);
+        gain.gain.exponentialRampToValueAtTime(
+          1.0,
+          ctx.currentTime + base + i * 0.09 + 0.02,
+        );
+        gain.gain.exponentialRampToValueAtTime(
+          0.0001,
+          ctx.currentTime + base + i * 0.09 + 0.28,
+        );
+        osc.connect(gain).connect(master);
+        osc.start(ctx.currentTime + base + i * 0.09);
+        osc.stop(ctx.currentTime + base + i * 0.09 + 0.3);
+      }
     }
   } catch {
-    // sin audio disponible: se ignora, el aviso visual sigue
+    // sin audio: el aviso visual sigue funcionando
   }
 }
 
@@ -64,7 +71,7 @@ function CocinaMonitor() {
 
   async function consultar() {
     try {
-      const res: any = await getOrderCounter({ data: { password } });
+      const res: any = await getReadyCounter({ data: { password } });
       if (!res.ok) {
         setMsg(res.error ?? "Error");
         if (res.error === "Contrasena incorrecta") setAuthed(false);
@@ -74,7 +81,6 @@ function CocinaMonitor() {
       setMsg("");
       const c = Number(res.counter ?? 0);
       if (ultimoRef.current === 0) {
-        // Primera carga: solo fijamos el punto de partida, sin sonar
         ultimoRef.current = c;
         setUltimo(c);
         return;
@@ -91,14 +97,13 @@ function CocinaMonitor() {
           }).format(new Date()),
         );
         setAviso(true);
-        tocarCampana();
+        alarmaFuerte();
       }
     } catch (e: any) {
       setMsg("Error de conexion: " + (e?.message ?? e));
     }
   }
 
-  // Consulta inicial y vigilancia cada 15 segundos
   useEffect(() => {
     if (!authed) return;
     consultar();
@@ -107,12 +112,12 @@ function CocinaMonitor() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authed]);
 
-  // Si hay aviso y la cocina no lo ha visto, se repite el sonido cada 20 segundos
+  // La alarma se repite cada 8 segundos hasta que cocina pulsa "Visto"
   useEffect(() => {
     if (!aviso) return;
     const id = setInterval(() => {
-      if (avisoRef.current) tocarCampana();
-    }, 20000);
+      if (avisoRef.current) alarmaFuerte();
+    }, 8000);
     return () => clearInterval(id);
   }, [aviso]);
 
@@ -176,15 +181,13 @@ function CocinaMonitor() {
     >
       <h1 style={{ fontSize: 26, marginBottom: 4 }}>Campana de Pedidos</h1>
       <p style={{ color: "#bbb" }}>
-        Ultimo pedido registrado: <strong>#{ultimo}</strong>
+        Pedidos enviados a cocina: <strong>{ultimo}</strong>
       </p>
       <p style={{ color: "#888", fontSize: 13 }}>
-        La pagina vigila cada 15 segundos. Dejala abierta en la cocina.
+        La pagina vigila cada 15 segundos. Dejala abierta en la cocina con el volumen al maximo.
       </p>
       <button
-        onClick={() => {
-          tocarCampana();
-        }}
+        onClick={alarmaFuerte}
         style={{
           marginTop: 10,
           padding: "8px 14px",
@@ -195,7 +198,7 @@ function CocinaMonitor() {
           cursor: "pointer",
         }}
       >
-        Probar sonido
+        Probar alarma
       </button>
       {msg && <p style={{ color: "#ff8080" }}>{msg}</p>}
 
@@ -212,7 +215,7 @@ function CocinaMonitor() {
         >
           <div style={{ fontSize: 24, fontWeight: "bold" }}>PEDIDO NUEVO</div>
           <div style={{ fontSize: 16, marginTop: 8 }}>
-            Pedido #{ultimo} · llego a las {hora}
+            Confirmado a las {hora}
           </div>
           <div style={{ fontSize: 14, color: "#ffd9a0", marginTop: 10 }}>
             Revisa el email o Telegram de cocina
