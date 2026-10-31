@@ -145,8 +145,11 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  // Paginas limpias: sin agente flotante ni sonido ambiente
   const cleanPage =
-    pathname.startsWith("/reservas") || pathname.startsWith("/admin");
+    pathname.startsWith("/reservas") ||
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/cocina");
 
   return (
     <CartProvider>
