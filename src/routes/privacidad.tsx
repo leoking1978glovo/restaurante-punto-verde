@@ -35,10 +35,10 @@ function PrivacidadPage() {
 
         <Section title="1. Responsable del tratamiento">
           <ul className="list-disc pl-6 space-y-1">
-            <li><strong>Responsable:</strong> {"<<CAMBIAR: NOMBRE O RAZÓN SOCIAL DEL TITULAR>>"}</li>
-            <li><strong>NIF/CIF:</strong> {"<<CAMBIAR: NIF O CIF>>"}</li>
+            <li><strong>Responsable:</strong> {"JOHN SEBASTIAN BEDOYA ZAPATA"}</li>
+            <li><strong>NIF/CIF:</strong> {"Z0958149C"}</li>
             <li><strong>Domicilio:</strong> C. Miguel Rúa, 64, 04009 Almería, España</li>
-            <li><strong>Correo electrónico:</strong> {"<<CAMBIAR: EMAIL DE CONTACTO>>"}</li>
+            <li><strong>Correo electrónico:</strong> {"RESTA.PUNTOVERDE2024@GMAIL.COM"}</li>
           </ul>
         </Section>
 
@@ -81,7 +81,7 @@ function PrivacidadPage() {
         <Section title="5. Tus derechos">
           <p>
             Puedes ejercer tus derechos de acceso, rectificación, supresión, oposición, limitación y
-            portabilidad escribiendo a {"<<CAMBIAR: EMAIL DE CONTACTO>>"}, adjuntando un documento
+            portabilidad escribiendo a {"RESTA.PUNTOVERDE2024@GMAIL.COM"}, adjuntando un documento
             que acredite tu identidad. También tienes derecho a reclamar ante la Agencia Española de
             Protección de Datos (www.aepd.es).
           </p>
